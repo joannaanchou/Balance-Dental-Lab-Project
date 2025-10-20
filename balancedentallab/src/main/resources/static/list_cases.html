@@ -1,0 +1,1305 @@
+<!doctype html>
+<html lang="zh-Hant">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Balanced Dental Lab｜訂單管理</title>
+
+  <!-- Bootstrap 5 CSS & Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet" />
+
+  <!-- 全站主題 -->
+  <link rel="stylesheet" href="styles.css">
+
+  <!-- 這頁專用的小幅強化樣式（不影響全站） -->
+  <style>
+    /* =========================
+       統一視覺語言：按鈕/晶片
+       ========================= */
+    .btn-ux {
+      border-radius: 12px;
+      font-weight: 800;
+      letter-spacing: .02em;
+      padding: .55rem .9rem;
+    }
+
+    /* 主要行動（匯出全部等）：漸層＋光澤 */
+    .btn-gradient {
+      position: relative;
+      overflow: hidden;
+      border: 0;
+      color: #fff;
+      background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 60%, #06b6d4 100%);
+      box-shadow: 0 10px 22px rgba(79, 70, 229, .25);
+      transition: transform .12s ease, box-shadow .12s ease;
+    }
+
+    .btn-gradient:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 16px 26px rgba(79, 70, 229, .32);
+      color: #fff;
+    }
+
+    .btn-gradient .shine {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      mix-blend-mode: screen;
+      background: linear-gradient(120deg, transparent 0%, rgba(255, 255, 255, .35) 40%, transparent 70%);
+      transform: translateX(-150%);
+      transition: transform .6s ease;
+    }
+
+    .btn-gradient:hover .shine {
+      transform: translateX(150%);
+    }
+
+    /* 次要行動（匯出本頁、以編號查詢）：虛線描邊＋輕底色 */
+    .btn-outline-dash {
+      border: 2px dashed rgba(79, 70, 229, .55);
+      color: #4f46e5;
+      background: rgba(79, 70, 229, .06);
+    }
+
+    .btn-outline-dash:hover {
+      background: rgba(79, 70, 229, .12);
+      color: #4338ca;
+      border-color: #4338ca;
+    }
+
+    /* 編輯／刪除：柔和實心，和諧但保留語意色 */
+    .btn-soft-warning {
+      background: linear-gradient(135deg, #fde68a 0%, #fbbf24 100%);
+      color: #78350f;
+      border: 0;
+      box-shadow: 0 4px 12px rgba(251, 191, 36, .35);
+    }
+
+    .btn-soft-warning:hover {
+      filter: brightness(.98);
+      color: #78350f;
+    }
+
+    .btn-soft-danger {
+      background: linear-gradient(135deg, #fecaca 0%, #f87171 100%);
+      color: #7f1d1d;
+      border: 0;
+      box-shadow: 0 4px 12px rgba(248, 113, 113, .35);
+    }
+
+    .btn-soft-danger:hover {
+      filter: brightness(.98);
+      color: #7f1d1d;
+    }
+
+    /* 柔和主色：與編輯/刪除系一樣的質感，但用品牌色 */
+    .btn-soft-primary {
+      background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+      /* indigo 的淡色 */
+      color: #1e3a8a;
+      /* 深靛字色（可讀性） */
+      border: 0;
+      box-shadow: 0 4px 12px rgba(99, 102, 241, .28);
+      /* 與其他 soft 系一致的陰影重量 */
+    }
+
+    .btn-soft-primary:hover {
+      filter: brightness(.98);
+      color: #1e3a8a;
+    }
+
+
+    /* 吸睛統計晶片（本頁合計／篩選合計） */
+    .stat-wrap {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .75rem;
+      align-items: center
+    }
+
+    .stat-chip {
+      --glow: 32, 211, 238;
+      /* brand-accent */
+      display: flex;
+      align-items: center;
+      gap: .65rem;
+      padding: .55rem .9rem;
+      border-radius: 999px;
+      background: linear-gradient(135deg, rgba(79, 70, 229, .12), rgba(124, 58, 237, .12));
+      border: 1px solid rgba(79, 70, 229, .3);
+      box-shadow: 0 0 0 2px rgba(79, 70, 229, .08), 0 8px 20px rgba(var(--glow), .18) inset;
+      backdrop-filter: saturate(130%) blur(4px);
+    }
+
+    .stat-chip .badge-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, rgba(var(--glow), .95), rgba(var(--glow), .45));
+      box-shadow: 0 0 8px rgba(var(--glow), .8);
+    }
+
+    .stat-chip .label {
+      color: #475569;
+      font-weight: 700;
+      letter-spacing: .02em;
+      font-size: .85rem;
+    }
+
+    .stat-chip .value {
+      font-weight: 900;
+      font-size: 1.05rem;
+      color: #0f172a;
+    }
+
+    .stat-chip .value .unit {
+      color: #64748b;
+      font-weight: 700;
+      margin-right: .15rem;
+    }
+
+    /* 使三顆操作鈕與匯出鈕視覺一致：同圓角與高度 */
+    .action-bar .btn {
+      border-radius: 12px;
+      font-weight: 800;
+      letter-spacing: .02em;
+    }
+
+    /* 窄螢幕排列 */
+    @media (max-width: 576px) {
+      .stat-wrap {
+        justify-content: flex-start
+      }
+
+      .btn-group.flex-wrap>* {
+        flex: 1 1 auto
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app" class="container-fluid">
+    <div class="row g-0">
+      <!-- 左側選單（模組插入） -->
+      <div id="sidebar-container" class="col-md-2 sidebar"></div>
+
+      <!-- 右側內容區 -->
+      <main class="col-12 col-md-10 p-3 p-lg-4">
+        <!-- Header -->
+        <div class="header d-flex justify-content-between align-items-center">
+          <h5 class="mb-0 d-flex align-items-center gap-2">
+            <i class="bi bi-journal-text"></i>
+            {{ getViewTitle() }}
+          </h5>
+          <div class="d-flex align-items-center gap-3">
+            <span class="text-muted"><i class="bi bi-clock"></i> {{ currentTime }}</span>
+            <span class="badge text-bg-primary"><i class="bi bi-person-circle"></i> {{ loginUser }}｜{{ loginRole
+              }}</span>
+          </div>
+        </div>
+
+        <div class="content-area">
+          <!-- 工具列：統一語系（晶片＋漸層/虛線鈕） -->
+          <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+              <span class="d-flex align-items-center gap-2">
+                <i class="bi bi-folder-fill"></i> 訂單管理列表
+              </span>
+
+              <div class="ms-auto d-flex flex-wrap gap-2 align-items-center">
+                <div class="stat-wrap">
+                  <div class="stat-chip">
+                    <span class="badge-dot"></span>
+                    <span class="label">本頁合計</span>
+                    <span class="value"><span class="unit">$</span>{{ fmtMoney(pageTotal) }}</span>
+                  </div>
+                  <div class="stat-chip">
+                    <span class="badge-dot"></span>
+                    <span class="label">篩選合計</span>
+                    <span class="value"><span class="unit">$</span>{{ fmtMoney(filteredTotal) }}</span>
+                  </div>
+                </div>
+
+                <div class="btn-group flex-wrap">
+                  <button class="btn btn-ux btn-outline-dash" @click="exportCSV('page')">
+                    <i class="bi bi-download me-1"></i> 匯出本頁 CSV
+                  </button>
+                  <button class="btn btn-ux btn-gradient" @click="exportCSV('all')">
+                    <span class="shine"></span>
+                    <i class="bi bi-filetype-csv me-1"></i> 匯出篩選全部
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 查詢條件 -->
+          <div class="card shadow-sm mb-3">
+            <div class="card-body">
+              <div class="form-section-title mb-3">查詢條件</div>
+              <div class="row g-3 align-items-end">
+                <!-- 診所 -->
+                <div class="col-md-3">
+                  <label class="form-label">診所</label>
+                  <select class="form-select" v-model="filters.clinicId" @change="onClinicChange">
+                    <option value="">（全部）</option>
+                    <option v-for="(c,idx) in clinics" :key="c.__key ?? idx" :value="c.clinicNo ?? c.id">
+                      {{ c.name }}
+                    </option>
+                  </select>
+                </div>
+
+                <!-- 醫師（連動） -->
+                <div class="col-md-3">
+                  <label class="form-label">醫師</label>
+                  <select class="form-select" v-model="filters.dentistId"
+                    :disabled="dentistsLoading || !filters.clinicId">
+                    <option value="">（全部）</option>
+                    <option v-for="(d,idx) in dentists" :key="d.__key ?? idx" :value="d.dentistNo || d.id">
+                      {{ d.name }}
+                    </option>
+                  </select>
+                </div>
+
+                <!-- 時間篩選 -->
+                <div class="col-md-3">
+                  <label class="form-label">時間篩選</label>
+                  <select class="form-select" v-model="filters.timeRange">
+                    <option value="all">全部</option>
+                    <option value="7d">過去一週</option>
+                    <option value="30d">過去一個月</option>
+                    <option value="custom">自訂區間</option>
+                  </select>
+                </div>
+
+                <!-- 自訂起訖 -->
+                <div class="col-md-3" v-if="filters.timeRange==='custom'">
+                  <div class="row g-2">
+                    <div class="col-6">
+                      <label class="form-label">起</label>
+                      <input type="date" class="form-control" v-model="filters.startDate" />
+                    </div>
+                    <div class="col-6">
+                      <label class="form-label">訖</label>
+                      <input type="date" class="form-control" v-model="filters.endDate" />
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 確認 -->
+                <div class="col-md-2">
+                  <button class="btn btn-ux btn-soft-primary w-100" @click="applyFilters">
+                    <i class="bi bi-search me-1"></i> 確認
+                  </button>
+
+
+                </div>
+
+                <!-- 每頁筆數 -->
+                <div class="col-md-2">
+                  <label class="form-label">每頁筆數</label>
+                  <select class="form-select" v-model.number="pageSize" @change="onPageSizeChange">
+                    <option :value="10">10</option>
+                    <option :value="20">20</option>
+                    <option :value="50">50</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 上方操作（以編號查詢／編輯／刪除）— 統一語言 -->
+          <div class="card shadow-sm mb-3">
+            <div class="card-body">
+              <div class="row g-2 align-items-end action-bar">
+                <div class="col-md-6">
+                  <label class="form-label">請輸入 Case No</label>
+                  <input type="text" class="form-control" placeholder="例如：CASE20251012-000004"
+                    v-model.trim="caseNoInput" @keyup.enter="searchByCaseNo" />
+                </div>
+                <div class="col-md-6 d-flex gap-2 justify-content-end">
+                  <!-- 與匯出本頁一致：虛線描邊 -->
+                  <button class="btn btn-ux btn-outline-dash" :disabled="!caseNoInput" @click="searchByCaseNo">
+                    <i class="bi bi-funnel me-1"></i> 以編號查詢
+                  </button>
+                  <!-- 柔和警告：編輯 -->
+                  <button class="btn btn-ux btn-soft-warning" :disabled="!caseNoInput" @click="goEditCase">
+                    <i class="bi bi-pencil-square me-1"></i> 編輯
+                  </button>
+                  <!-- 柔和危險：刪除 -->
+                  <button class="btn btn-ux btn-soft-danger" :disabled="!caseNoInput" @click="deleteCase">
+                    <i class="bi bi-trash me-1"></i> 刪除
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 列表 -->
+          <div class="card shadow-sm">
+            <div class="card-header d-flex align-items-center justify-content-between">
+              <span><i class="bi bi-list-check me-2"></i> 訂單列表</span>
+              <small class="text-white-50">共有 <strong>{{ totalCount }}</strong> 筆</small>
+            </div>
+            <div class="card-body p-0">
+              <div class="scroll-frame">
+                <table class="table table-hover align-middle mb-0">
+                  <thead class="table-light">
+                    <tr>
+                      <th style="width: 60px;"></th>
+                      <th>ID</th>
+                      <th>Case No</th>
+                      <th>診所</th>
+                      <th>醫師</th>
+                      <th>患者</th>
+                      <th>收件時間</th>
+                      <th>寄回時間</th>
+                      <th class="text-end">總金額</th>
+                      <th>建立者</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <template v-for="(c,idx) in pagedCases" :key="'row-'+(c.caseNo ?? idx)">
+                      <tr class="row-toggle" @click="toggleExpand(c)">
+                        <td class="text-center">
+                          <i class="bi"
+                            :class="expanded[c.caseNo] ? 'bi-caret-down-square' : 'bi-caret-right-square'"></i>
+                        </td>
+                        <td>{{ c.id ?? '—' }}</td>
+                        <td class="code">{{ c.caseNo }}</td>
+                        <td>{{ clinicNameOf(c.clinicNo, c) }}</td>
+                        <td>{{ dentistNameOf(c.dentistNo, c) }}</td>
+                        <td>{{ c.patientName ?? '—' }}</td>
+                        <td>{{ fmtDateTime(c.receivedAt) }}</td>
+                        <td>{{ fmtDateTime(c.returnAt) }}</td>
+                        <td class="text-end">{{ fmtMoney(c.totalAmount) }}</td>
+                        <td class="code">{{ createdByNameOf(c) }}</td>
+                      </tr>
+
+                      <tr v-show="expanded[c.caseNo]">
+                        <td></td>
+                        <td colspan="9">
+                          <div class="p-3 bg-light border rounded">
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                              <i class="bi bi-receipt-cutoff text-primary"></i>
+                              <span class="fw-semibold">Orders for <span class="code">{{ c.caseNo }}</span></span>
+                            </div>
+
+                            <div v-if="ordersLoading[c.caseNo]" class="text-muted">載入中…</div>
+                            <div v-else-if="(ordersMap[c.caseNo]||[]).length === 0" class="text-muted">尚無訂單</div>
+
+                            <div v-else class="table-responsive">
+                              <table class="table table-sm align-middle">
+                                <thead>
+                                  <tr>
+                                    <th>Order No</th>
+                                    <th>Tooth Code</th>
+                                    <th>Item Name</th>
+                                    <th class="text-end">Order Total</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  <tr v-for="(o,oIdx) in ordersMap[c.caseNo]" :key="o.orderNo ?? oIdx">
+                                    <td class="code">{{ o.orderNo }}</td>
+                                    <td>{{ o.toothCode || '—' }}</td>
+                                    <td>
+                                      <ul class="mb-0 ps-3">
+                                        <li v-for="(d,dIdx) in (o.details || [])" :key="d.id ?? dIdx">
+                                          <span class="code">{{ d.productNo }}</span>
+                                          → {{ d._resolvedItemName || itemNameOf(d.productNo) || '—' }}
+                                          <span class="text-muted">（x{{ d.qty }}）</span>
+                                        </li>
+                                      </ul>
+                                    </td>
+                                    <td class="text-end">{{ fmtMoney(o.totalAmount) }}</td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
+
+                          </div>
+                        </td>
+                      </tr>
+                    </template>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- 分頁器 -->
+            <div class="card-body border-top">
+              <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <div>
+                  <small class="text-muted">
+                    共有 <strong>{{ totalCount }}</strong> 筆，頁數 <strong>{{ page }}</strong> / <strong>{{ totalPages
+                      }}</strong>
+                  </small>
+                </div>
+                <nav>
+                  <ul class="pagination mb-0">
+                    <li :class="['page-item', {disabled: page<=1}]">
+                      <button class="page-link" @click="goPage(1)" :disabled="page<=1">«</button>
+                    </li>
+                    <li :class="['page-item', {disabled: page<=1}]">
+                      <button class="page-link" @click="goPage(page-1)" :disabled="page<=1">‹</button>
+                    </li>
+                    <li v-for="p in pageNumbers" :key="p" :class="['page-item', {active: p===page}]">
+                      <button class="page-link" @click="goPage(p)">{{ p }}</button>
+                    </li>
+                    <li :class="['page-item', {disabled: page>=totalPages}]">
+                      <button class="page-link" @click="goPage(page+1)" :disabled="page>=totalPages">›</button>
+                    </li>
+                    <li :class="['page-item', {disabled: page>=totalPages}]">
+                      <button class="page-link" @click="goPage(totalPages)" :disabled="page>=totalPages">»</button>
+                    </li>
+                  </ul>
+                </nav>
+              </div>
+            </div>
+          </div>
+
+          <!-- Toast -->
+          <div class="position-fixed bottom-0 end-0 p-3" style="z-index:1080">
+            <div id="toastSuccess" ref="toastSuccess" class="toast align-items-center border-0" role="alert"
+              aria-live="assertive" aria-atomic="true" data-bs-autohide="true">
+              <div class="d-flex">
+                <div class="toast-body">操作成功</div>
+                <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast"></button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Sidebar 模組 -->
+  <script type="module">
+    import { sidebarTemplate } from './js/sidebar.js';
+    const sidebarContainer = document.querySelector('#sidebar-container');
+    sidebarContainer.innerHTML = sidebarTemplate;
+
+    const logoutBtn = sidebarContainer.querySelector('#logoutBtn');
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (confirm('確定要登出嗎？')) {
+          try {
+            localStorage.removeItem('loginUser');
+            localStorage.removeItem('loginRole');
+            localStorage.removeItem('loginEmpNo');
+            localStorage.removeItem('user');
+            sessionStorage.clear?.();
+          } catch (_) { }
+          window.location.href = 'login.html';
+        }
+      });
+    }
+  </script>
+
+  <!-- Vue / axios / Bootstrap JS & page logic -->
+  <script src="https://unpkg.com/vue@3.5.12/dist/vue.global.prod.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios@1.7.7/dist/axios.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- 你原本的列表頁邏輯（保留） -->
+  <script>const { createApp, ref, reactive, computed, onMounted } = Vue;
+
+    createApp({
+      setup() {
+        const BASE_URL = (typeof window !== 'undefined' && window.API_BASE_URL)
+          ? String(window.API_BASE_URL)
+          : "http://localhost:8080";
+
+        const API = {
+          clinicsOpts: "/api/clinics/options",
+          dentistsByClinic: (clinicId) => `/api/clinics/${encodeURIComponent(clinicId)}/dentists`,
+          dentistsByClinicNo: (clinicNo) => `/api/clinics/no/${encodeURIComponent(clinicNo)}/dentists`,
+          dentistsQueryByNo: (clinicNo) => `/api/dentists?clinicNo=${encodeURIComponent(clinicNo)}`,
+          dentistsQueryById: (clinicId) => `/api/dentists?clinicId=${encodeURIComponent(clinicId)}`,
+
+          clinicByNo: (clinicNo) => `/api/clinics/no/${encodeURIComponent(clinicNo)}`,
+          dentistByNo: (dentistNo) => `/api/dentists/no/${encodeURIComponent(dentistNo)}`,
+
+          cases: "/api/cases",
+          caseOrdersA: null,
+          caseOrdersB: (caseNo) => `/api/orders?caseNo=${encodeURIComponent(caseNo)}`,
+          orderDetails: (orderNo) => `/api/orders/${encodeURIComponent(orderNo)}/details`,
+
+          productDetailA: (productNo) => `/api/product-details/${encodeURIComponent(productNo)}`,
+          productDetailB: (productNo) => `/api/products/${encodeURIComponent(productNo)}`,
+          productDetailC: (productNo) => `/api/productDetail/${encodeURIComponent(productNo)}`,
+          productDetailD: (productNo) => `/api/product-details/find?productNo=${encodeURIComponent(productNo)}`,
+
+          memberByEmpNoA: (empNo) => `/api/members/${encodeURIComponent(empNo)}`,
+          memberByEmpNoB: (empNo) => `/api/members/empNo/${encodeURIComponent(empNo)}`
+        };
+
+        // 下拉與名稱 map
+        const clinics = ref([]);
+        const clinicsMap = reactive(new Map());
+
+        const dentists = ref([]);               // 下拉選單資料
+        const dentistsMap = reactive(new Map()); // 下拉顯示用
+        const dentistsLoading = ref(false);
+
+        // 列表顯示名字的快取
+        const dentistNameCache = reactive(new Map());
+
+        const memberNameCache = reactive(new Map());
+
+
+
+        // Cases + pagination
+        const casesRaw = ref([]);
+        const cases = ref([]);
+        const page = ref(1);
+        const pageSize = ref(10);
+        const totalCount = ref(0);
+        const totalPages = ref(1);
+        const serverPaging = ref(false);
+
+        const expanded = reactive({});
+        const ordersMap = reactive({});
+        const ordersLoading = reactive({});
+        const productItemNameCache = reactive(new Map());
+
+        const caseNoInput = ref("");
+
+        const filters = reactive({
+          clinicId: "",
+          dentistId: "",
+          timeRange: "all",
+          startDate: "",
+          endDate: ""
+        });
+
+        // Toast
+        const toastSuccess = ref(null);
+        let toastInstance = null;
+        const showToast = (msg = "操作成功") => {
+          if (toastSuccess.value && window.bootstrap && bootstrap.Toast) {
+            if (!toastInstance) toastInstance = bootstrap.Toast.getOrCreateInstance(toastSuccess.value, { delay: 1500 });
+            toastSuccess.value.querySelector(".toast-body").textContent = msg;
+            toastInstance.show();
+          }
+        };
+
+        // 工具
+        const fmtDateTime = (s) => {
+          if (!s) return "—";
+          const d = (typeof s === "string" && s.includes("T")) ? new Date(s) : new Date(String(s).replace(/-/g, '/'));
+          if (isNaN(d)) return s;
+          const pad = (n) => String(n).padStart(2, '0');
+          return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        };
+        const fmtMoney = (n) => `$ ${(n == null ? 0 : Number(n)).toLocaleString("zh-TW", { minimumFractionDigits: 0 })}`;
+        const csvMoney = (n) => `$ ${n == null ? 0 : Number(n)}`;
+
+        const clinicNameOf = (clinicNoOrId, c) => {
+          return c?.clinic?.clinicName
+            || c?.clinic?.name
+            || c?.clinicName
+            || clinicsMap.get(String(clinicNoOrId))
+            || clinicNoOrId
+            || '—';
+        };
+
+        // 顯示醫師名：巢狀 → 顯示快取 → 下拉對照 → 代碼
+        const dentistNameOf = (dentistNoOrId, c) => {
+          const key = String(dentistNoOrId || '');
+          return c?.dentist?.dentistName
+            || c?.dentist?.name
+            || c?.dentistName
+            || dentistNameCache.get(key)
+            || dentistsMap.get(key)
+            || key
+            || '—';
+        };
+
+        const itemNameOf = (productNo) => {
+          const key = String(productNo || "");
+          if (!key) return "—";
+          return productItemNameCache.get(key) || "(載入中…)";
+        };
+        const ensureItemName = async (productNo) => {
+          const key = String(productNo || "");
+          if (!key || productItemNameCache.has(key)) return;
+          const tryUrls = [API.productDetailA(productNo), API.productDetailB(productNo), API.productDetailC(productNo), API.productDetailD(productNo)];
+          for (const u of tryUrls) {
+            try {
+              const { data } = await axios.get(BASE_URL + u);
+              const candidate = data?.item?.name || data?.itemName || data?.name || null;
+              if (candidate) { productItemNameCache.set(key, candidate); return; }
+            } catch { }
+          }
+          productItemNameCache.set(key, key);
+        };
+
+        const createdByNameOf = (c) => {
+          if (c.createdByUsername) return c.createdByUsername;
+          if (c.createdBy && typeof c.createdBy === 'object') return c.createdBy.username || c.createdBy.empNo || '';
+          const emp = (c.createdByEmpNo || c.createdBy || '').toString();
+          return memberNameCache.get(emp) || emp || '';
+        };
+        const ensureMemberName = async (empNo) => {
+          const key = String(empNo || "");
+          if (!key || memberNameCache.has(key)) return;
+          const tryUrls = [API.memberByEmpNoA(empNo), API.memberByEmpNoB(empNo)];
+          for (const u of tryUrls) {
+            try {
+              const { data } = await axios.get(BASE_URL + u);
+              const username = data?.username || data?.name || data?.member?.username;
+              if (username) { memberNameCache.set(key, username); return; }
+            } catch { }
+          }
+        };
+
+        // === 時間工具（固定用 receivedAt 篩選）===
+        const getDateRange = () => {
+          if (filters.timeRange === "all") return null;
+
+          let start, end;
+          if (filters.timeRange === "custom" && filters.startDate && filters.endDate) {
+            start = new Date(String(filters.startDate) + "T00:00:00");
+            end = new Date(String(filters.endDate) + "T23:59:59.999");
+          } else {
+            const todayEnd = new Date();
+            todayEnd.setHours(23, 59, 59, 999);
+            const days = filters.timeRange === "7d" ? 7 : 30;
+            start = new Date(todayEnd);
+            start.setDate(todayEnd.getDate() - (days - 1));
+            start.setHours(0, 0, 0, 0);
+            end = todayEnd;
+          }
+          return { start, end };
+        };
+
+        const fmtDateTimeLocal = (d) => {
+          const y = d.getFullYear();
+          const m = String(d.getMonth() + 1).padStart(2, '0');
+          const day = String(d.getDate()).padStart(2, '0');
+          const hh = String(d.getHours()).padStart(2, '0');
+          const mm = String(d.getMinutes()).padStart(2, '0');
+          const ss = String(d.getSeconds()).padStart(2, '0');
+          return `${y}-${m}-${day}T${hh}:${mm}:${ss}`;
+        };
+
+        // 只用 receivedAt 檢查是否在區間
+        const inRangeByReceivedAt = (row, start, end) => {
+          const raw = (row.receivedAt || '').toString();
+          const t = raw.includes('T') ? new Date(raw) : new Date(raw.replace(/-/g, '/'));
+          return !isNaN(t) && t >= start && t <= end;
+        };
+
+        // 排序：優先 receivedAt，沒有再用 createdAt
+        const getSortTime = (row) => {
+          const ra = (row.receivedAt || '').toString();
+          const a = ra.includes('T') ? new Date(ra) : new Date(ra.replace(/-/g, '/'));
+          if (!isNaN(a)) return a.getTime();
+          const rb = (row.createdAt || '').toString();
+          const b = rb.includes('T') ? new Date(rb) : new Date(rb.replace(/-/g, '/'));
+          return isNaN(b) ? 0 : b.getTime();
+        };
+
+        // 正規化
+        const normalizeClinic = (c, idx) => {
+          if (c == null) return null;
+          if (typeof c === 'string' || typeof c === 'number') {
+            return { id: String(c), clinicNo: String(c), name: String(c), __key: `c-${idx}` };
+          }
+          const id = c.id ?? c.clinicNo ?? c.clinic_no;
+          const name = c.name ?? c.clinicName ?? c.clinic_name ?? '';
+          const clinicNo = c.clinicNo ?? c.clinic_no ?? c.id ?? '';
+          if (id == null && !clinicNo) return null;
+          return { id: String(id ?? clinicNo), clinicNo: String(clinicNo || id), name: String(name), __key: c.id ?? c.clinicNo ?? c.clinic_no ?? idx };
+        };
+
+        const normalizeDentist = (d, idx) => {
+          if (d == null) return null;
+          if (typeof d === 'string' || typeof d === 'number') {
+            return { id: String(d), dentistNo: String(d), name: String(d), _clinicKeys: [], __key: `d-${idx}` };
+          }
+          const id = d.id ?? d.dentistNo ?? d.dentist_no;
+          const name = d.name ?? d.dentistName ?? d.dentist_name ?? '';
+          const dentistNo = d.dentistNo ?? d.dentist_no ?? d.id ?? '';
+          const clinicNo = d.clinicNo ?? d.clinic_no ?? d?.clinic?.clinicNo ?? d?.clinic?.clinic_no;
+          const clinicId = d.clinicId ?? d.clinic_id ?? d?.clinic?.id ?? d?.clinic?.clinicId ?? d?.clinic?.clinic_id;
+          const clinicKeys = [clinicNo, clinicId].filter(v => v != null && v !== '').map(v => String(v));
+          if (id == null && !dentistNo) return null;
+          return { id: String(id ?? dentistNo), dentistNo: String(dentistNo || id), name: String(name), _clinicKeys: clinicKeys, __key: d.id ?? d.dentistNo ?? d.dentist_no ?? idx };
+        };
+
+        // 依目前選到的診所，回推 id 與 no
+        const getSelectedClinic = () => {
+          const raw = filters.clinicId == null ? '' : String(filters.clinicId);
+          return clinics.value.find(c => String(c.clinicNo) === raw || String(c.id) === raw) || null;
+        };
+
+        // 決定只送哪一組鍵名（避免 AND）
+        const decideEntityParam = () => {
+          const selClinic = getSelectedClinic();
+          const clinicParam = {};
+          if (filters.clinicId) {
+            if (selClinic && String(selClinic.clinicNo) === String(filters.clinicId)) {
+              clinicParam.key = "clinicNo"; clinicParam.val = selClinic.clinicNo;
+            } else if (selClinic && String(selClinic.id) === String(filters.clinicId)) {
+              clinicParam.key = "clinicId"; clinicParam.val = selClinic.id;
+            } else {
+              // 不在清單：預設當成代碼
+              clinicParam.key = "clinicNo"; clinicParam.val = filters.clinicId;
+            }
+          }
+
+          const dentistParam = {};
+          if (filters.dentistId) {
+            // 若值像 D001 → 當作 No；否則當作 Id
+            if (/^[A-Za-z]\d{3,}$/.test(String(filters.dentistId))) {
+              dentistParam.key = "dentistNo"; dentistParam.val = filters.dentistId;
+            } else {
+              dentistParam.key = "dentistId"; dentistParam.val = filters.dentistId;
+            }
+          }
+          return { clinicParam, dentistParam };
+        };
+
+        // 載入下拉
+        const loadClinics = async () => {
+          try {
+            const { data } = await axios.get(BASE_URL + API.clinicsOpts);
+            const list = Array.isArray(data) ? data : [];
+            const normalized = list.map(normalizeClinic).filter(Boolean);
+            clinics.value = normalized;
+            clinicsMap.clear();
+            for (const c of normalized) {
+              clinicsMap.set(String(c.id), c.name);
+              clinicsMap.set(String(c.clinicNo), c.name);
+            }
+          } catch { clinics.value = []; }
+        };
+
+        const getSelectedClinicKeys = () => {
+          const raw = filters.clinicId == null ? '' : String(filters.clinicId);
+          const found = clinics.value.find(c => String(c.clinicNo) === raw || String(c.id) === raw);
+          return {
+            clinicId: found?.id != null ? String(found.id) : raw,
+            clinicNo: found?.clinicNo != null ? String(found.clinicNo) : raw
+          };
+        };
+
+        const loadDentists = async () => {
+          dentistsLoading.value = true;
+          dentists.value = [];
+          try {
+            const { clinicId, clinicNo } = getSelectedClinicKeys();
+            const tryUrls = [
+              API.dentistsByClinic(clinicId),
+              API.dentistsByClinicNo(clinicNo),
+              API.dentistsQueryByNo(clinicNo),
+              API.dentistsQueryById(clinicId),
+            ];
+            let list = [];
+            for (const path of tryUrls) {
+              try {
+                const { data } = await axios.get(BASE_URL + path);
+                const arr =
+                  (Array.isArray(data) && data) ||
+                  (Array.isArray(data?.content) && data.content) ||
+                  (Array.isArray(data?.data) && data.data) ||
+                  [];
+                if (arr.length) { list = arr; break; }
+              } catch { }
+            }
+
+            let normalized = list.map(normalizeDentist).filter(Boolean);
+            const anyHasClinicKey = normalized.some(d => Array.isArray(d._clinicKeys) && d._clinicKeys.length > 0);
+            if (anyHasClinicKey) {
+              const keySet = new Set([String(clinicId), String(clinicNo)]);
+              normalized = normalized.filter(d => d._clinicKeys.some(k => keySet.has(String(k))));
+            }
+
+            dentists.value = normalized;
+            dentistsMap.clear();
+            for (const d of normalized) {
+              dentistsMap.set(String(d.id), d.name);
+              dentistsMap.set(String(d.dentistNo), d.name);
+              dentistNameCache.set(String(d.id), d.name);
+              dentistNameCache.set(String(d.dentistNo), d.name);
+            }
+          } finally {
+            dentistsLoading.value = false;
+          }
+        };
+
+        const ensureClinicName = async (clinicNo, row) => {
+          // 先吃回應裡本來就有的名稱（若有）
+          const prefer = row?.clinic?.clinicName ?? row?.clinicName;
+          const cacheKey = String(clinicNo || row?.clinicId || '');
+          if (prefer) { clinicsMap.set(cacheKey, String(prefer)); return; }
+          if (!clinicNo) return; // 沒代碼就別打 /no/{...}
+          if (clinicsMap.get(cacheKey)) return;
+          try {
+            const { data } = await axios.get(BASE_URL + API.clinicByNo(clinicNo));
+            const name = data?.name ?? data?.clinicName ?? data?.clinic_name;
+            if (name) clinicsMap.set(cacheKey, String(name));
+          } catch { }
+        };
+
+        const ensureDentistName = async (dentistNo, row) => {
+          const prefer = row?.dentist?.dentistName ?? row?.dentistName;
+          const cacheKey = String(dentistNo || row?.dentistId || '');
+          if (prefer) { dentistNameCache.set(cacheKey, String(prefer)); return; }
+          if (!dentistNo) return;
+          if (dentistNameCache.get(cacheKey)) return;
+          try {
+            const { data } = await axios.get(BASE_URL + API.dentistByNo(dentistNo));
+            const name = data?.name ?? data?.dentistName ?? data?.dentist_name;
+            if (name) dentistNameCache.set(cacheKey, String(name));
+          } catch { }
+        };
+
+        const onClinicChange = async () => {
+          filters.dentistId = "";
+          dentists.value = [];
+          dentistsMap.clear();
+          if (filters.clinicId) await loadDentists();
+        };
+
+        // 查詢條件：只送一組診所/醫師鍵 + receivedAtStart/End
+        const buildCaseQueryParams = (withPaging = true) => {
+          const params = new URLSearchParams();
+
+          const { clinicParam, dentistParam } = decideEntityParam();
+          if (clinicParam.key && clinicParam.val) params.set(clinicParam.key, String(clinicParam.val));
+          if (dentistParam.key && dentistParam.val) params.set(dentistParam.key, String(dentistParam.val));
+
+          const range = getDateRange();
+          if (range) {
+            const { start, end } = range;
+            params.set("receivedAtStart", fmtDateTimeLocal(start)); // 00:00:00
+            params.set("receivedAtEnd", fmtDateTimeLocal(end));   // 23:59:59
+          }
+
+          params.set("sort", "receivedAt,desc");
+          if (withPaging) {
+            params.set("page", String(page.value - 1));
+            params.set("size", String(pageSize.value));
+          }
+          return params;
+        };
+
+
+
+        const normalizeCase = (x) => {
+          if (x == null || typeof x !== 'object') return null;
+          const clinicNo = x?.clinic?.clinicNo ?? x.clinicNo ?? x.clinic_no ?? '';
+          const clinicId = x?.clinic?.id ?? x.clinicId ?? x.clinic_id ?? '';
+          const dentistNo = x?.dentist?.dentistNo ?? x.dentistNo ?? x.dentist_no ?? '';
+          const dentistId = x?.dentist?.id ?? x.dentistId ?? x.dentist_id ?? '';
+
+          // 若後端已回中文名稱，順手快取起來
+          if (x?.clinic?.clinicName) clinicsMap.set(String(clinicNo || clinicId || ''), String(x.clinic.clinicName));
+          if (x?.dentist?.dentistName) dentistNameCache.set(String(dentistNo || dentistId || ''), String(x.dentist.dentistName));
+
+          return {
+            id: x.id ?? x.caseId ?? null,
+            caseNo: x.caseNo ?? x.case_no ?? '',
+            clinicNo: String(clinicNo || ''),
+            clinicId: String(clinicId || ''),
+            dentistNo: String(dentistNo || ''),
+            dentistId: String(dentistId || ''),
+            patientName: x.patientName ?? x.patient_name ?? '',
+            receivedAt: x.receivedAt ?? x.received_at ?? '',
+            createdAt: x.createdAt ?? x.created_at ?? '',
+            returnAt: x.returnAt ?? x.return_at ?? '',
+            totalAmount: x.totalAmount ?? x.total_amount ?? 0,
+            createdBy: x.createdBy ?? x.created_by ?? ''
+          };
+        };
+
+        // 伺服器分頁；若回空或時間條件沒吃到，就自動退回客端過濾
+        const loadCasesServerPaged = async () => {
+          const params = buildCaseQueryParams(true);
+          const url = BASE_URL + API.cases + "?" + params.toString();
+          const { data } = await axios.get(url);
+
+          if (data && Array.isArray(data.content)) {
+            let mapped = data.content.map(normalizeCase).filter(Boolean);
+
+            // 後端忽略時間 → 再過一遍（只看 receivedAt）
+            const range = getDateRange();
+            let filtered = mapped;
+            if (range) {
+              const { start, end } = range;
+              filtered = mapped.filter(x => inRangeByReceivedAt(x, start, end));
+            }
+
+            // 1) 有資料且沒被砍 → 沿用 server 分頁
+            if (filtered.length > 0 && (!range || filtered.length === mapped.length)) {
+              serverPaging.value = true;
+              cases.value = filtered;
+              totalCount.value = Number(data.totalElements ?? filtered.length);
+              totalPages.value = Math.max(1, Number(data.totalPages ?? 1));
+            } else {
+              // 2) 被砍光 / 後端沒吃到條件 → 客端取全量再篩
+              const list = await loadCasesServerAll();
+              casesRaw.value = list;
+              totalCount.value = list.length;
+              totalPages.value = Math.max(1, Math.ceil(totalCount.value / pageSize.value));
+              serverPaging.value = false;
+              applyClientPageSlice();
+            }
+
+            const listForNames = serverPaging.value ? cases.value : casesRaw.value;
+            await Promise.all(listForNames.map(async (c) => {
+              await ensureClinicName(c.clinicNo, c);
+              await ensureDentistName(c.dentistNo, c);
+              await ensureMemberName(c.createdByEmpNo);
+            }));
+            return true;
+          }
+          return false;
+        };
+
+        const loadCasesServerAll = async () => {
+          const params = buildCaseQueryParams(false);
+          const url = BASE_URL + API.cases + (params.toString() ? ("?" + params.toString()) : "");
+          const { data } = await axios.get(url);
+          // 若後端因參數太嚴格回空，再補一次「完全不帶條件」取全量
+          let list = Array.isArray(data) ? data : (Array.isArray(data.content) ? data.content : []);
+          if (!Array.isArray(list) || list.length === 0) {
+            const { data: all } = await axios.get(BASE_URL + API.cases); // 全量
+            list = Array.isArray(all) ? all : (Array.isArray(all?.content) ? all.content : []);
+          }
+
+          let mapped = list.map(normalizeCase).filter(Boolean);
+
+          if (filters.clinicId) mapped = mapped.filter(x => String(x.clinicNo) === String(filters.clinicId) || String(x.clinicId) === String(filters.clinicId));
+          if (filters.dentistId) mapped = mapped.filter(x => String(x.dentistNo) === String(filters.dentistId) || String(x.dentistId) === String(filters.dentistId));
+
+          if (filters.timeRange !== "all") {
+            const range = getDateRange();
+            if (range) {
+              const { start, end } = range;
+              mapped = mapped.filter(x => inRangeByReceivedAt(x, start, end));
+            }
+          }
+
+          mapped.sort((a, b) => getSortTime(b) - getSortTime(a));
+
+          await Promise.all(mapped.map(async (c) => {
+            await ensureClinicName(c.clinicNo, c);
+            await ensureDentistName(c.dentistNo, c);
+            await ensureMemberName(c.createdByEmpNo);
+          }));
+
+          return mapped;
+        };
+
+        const loadCasesFallback = async () => {
+          const { data } = await axios.get(BASE_URL + API.cases);
+          const list = Array.isArray(data) ? data : (data?.content ?? []);
+          let arr = list.map(normalizeCase).filter(Boolean);
+          if (filters.clinicId) arr = arr.filter(x => String(x.clinicNo) === String(filters.clinicId) || String(x.clinicId) === String(filters.clinicId));
+          if (filters.dentistId) arr = arr.filter(x => String(x.dentistNo) === String(filters.dentistId) || String(x.dentistId) === String(filters.dentistId));
+          if (filters.timeRange !== "all") {
+            const range = getDateRange();
+            if (range) {
+              const { start, end } = range;
+              arr = arr.filter(x => inRangeByReceivedAt(x, start, end));
+            }
+          }
+          arr.sort((a, b) => getSortTime(b) - getSortTime(a));
+          await Promise.all(arr.map(async (c) => {
+            await ensureClinicName(c.clinicNo, c);
+            await ensureDentistName(c.dentistNo, c);
+            await ensureMemberName(c.createdByEmpNo);
+          }));
+          casesRaw.value = arr;
+          totalCount.value = arr.length;
+          totalPages.value = Math.max(1, Math.ceil(totalCount.value / pageSize.value));
+          serverPaging.value = false;
+          applyClientPageSlice();
+        };
+
+        const applyFilters = async () => {
+          if (filters.timeRange === "custom" && filters.startDate && filters.endDate) {
+            if (new Date(filters.startDate) > new Date(filters.endDate)) {
+              alert("自訂區間：起日不可晚於訖日"); return;
+            }
+          }
+          page.value = 1;
+          try {
+            const ok = await loadCasesServerPaged();
+            if (!ok) {
+              try {
+                const list = await loadCasesServerAll();
+                casesRaw.value = list;
+                totalCount.value = list.length;
+                totalPages.value = Math.max(1, Math.ceil(totalCount.value / pageSize.value));
+                serverPaging.value = false;
+                applyClientPageSlice();
+              } catch {
+                await loadCasesFallback();
+              }
+            }
+            for (const k in expanded) delete expanded[k];
+          } catch (err) {
+            console.error("載入 cases 失敗", err?.response || err);
+            alert("載入 cases 失敗：" + (err?.response?.data?.message || err?.message || "未知錯誤"));
+          }
+        };
+
+        // 分頁與加總
+        const casesForPage = computed(() => cases.value);
+        const pagedCases = computed(() => casesForPage.value);
+
+        const pageTotal = computed(() => pagedCases.value.reduce((sum, c) => sum + (Number(c.totalAmount) || 0), 0));
+        const filteredTotal = computed(() => {
+          if (serverPaging.value) return pagedCases.value.reduce((s, c) => s + (Number(c.totalAmount) || 0), 0);
+          return (casesRaw.value || []).reduce((s, c) => s + (Number(c.totalAmount) || 0), 0);
+        });
+
+        const pageNumbers = computed(() => {
+          const pages = totalPages.value, cur = page.value, delta = 2;
+          const start = Math.max(1, cur - delta);
+          const end = Math.min(pages, cur + delta);
+          const arr = [];
+          for (let p = start; p <= end; p++) arr.push(p);
+          if (arr[0] !== 1) arr.unshift(1);
+          if (arr[arr.length - 1] !== pages) arr.push(pages);
+          return [...new Set(arr)];
+        });
+
+        const goPage = async (p) => {
+          if (p < 1 || p > totalPages.value) return;
+          page.value = p;
+          if (serverPaging.value) await loadCasesServerPaged();
+          else applyClientPageSlice();
+          document.querySelector('.scroll-frame')?.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+
+        const onPageSizeChange = async () => {
+          page.value = 1;
+          if (serverPaging.value) await loadCasesServerPaged();
+          else {
+            totalPages.value = Math.max(1, Math.ceil((casesRaw.value?.length || 0) / pageSize.value));
+            applyClientPageSlice();
+          }
+        };
+
+        const applyClientPageSlice = () => {
+          const start = (page.value - 1) * pageSize.value;
+          const end = start + pageSize.value;
+          cases.value = (casesRaw.value || []).slice(start, end);
+        };
+
+        // 展開明細
+        const toggleExpand = async (c) => {
+          const caseNo = c.caseNo;
+          if (expanded[caseNo]) { expanded[caseNo] = false; return; }
+          if (!ordersMap[caseNo]) { await loadOrdersForCase(caseNo); }
+          expanded[caseNo] = true;
+        };
+
+        const loadOrdersForCase = async (caseNo) => {
+          if (ordersLoading[caseNo]) return;
+          if (ordersMap[caseNo]) return;
+          ordersLoading[caseNo] = true;
+          try {
+            const { data } = await axios.get(BASE_URL + API.caseOrdersB(caseNo));
+            const orders = Array.isArray(data) ? data : (data?.content ?? []);
+            for (const o of orders) {
+              o.orderNo = o.orderNo ?? o.order_no;
+              o.toothCode = o.toothCode ?? o.tooth_code;
+              o.totalAmount = o.totalAmount ?? o.total_amount ?? 0;
+            }
+            if (API.orderDetails) {
+              await Promise.all(orders.map(async (o) => {
+                if (!o.orderNo) { o.details = []; return; }
+                try {
+                  const { data: det } = await axios.get(BASE_URL + API.orderDetails(o.orderNo));
+                  o.details = Array.isArray(det) ? det : (det?.content ?? []);
+                } catch { o.details = []; }
+              }));
+            } else {
+              for (const o of orders) o.details = o.details || [];
+            }
+            await Promise.all(orders.flatMap((o) => (o.details || []).map(async (d) => {
+              d.id = d.id ?? d.detailId ?? d.detail_id ?? `${o.orderNo}-${Math.random()}`;
+              d.productNo = d.productNo ?? d.product_no ?? d.product?.productNo ?? d.product?.product_no ?? '';
+              d.qty = d.qty ?? d.quantity ?? 1;
+              const maybeName = d.itemName ?? d.product?.item?.name ?? d.product?.itemName ?? d.product?.name;
+              if (maybeName) d._resolvedItemName = String(maybeName);
+              if (maybeName && d.productNo) {
+                productItemNameCache.set(String(d.productNo), String(maybeName));
+              } else if (d.productNo) {
+                await ensureItemName(d.productNo);
+              }
+            })));
+            ordersMap[caseNo] = orders;
+          } finally {
+            ordersLoading[caseNo] = false;
+          }
+        };
+
+        // 搜尋 / 編輯 / 刪除
+        const searchByCaseNo = async () => {
+          if (!caseNoInput.value) return;
+          try {
+            const qs = new URLSearchParams({ caseNo: caseNoInput.value }).toString();
+            let list = [];
+            try {
+              const { data } = await axios.get(BASE_URL + API.cases + "?" + qs);
+              list = Array.isArray(data) ? data : (data?.content ?? []);
+            } catch (e) {
+              const { data } = await axios.get(BASE_URL + API.cases);
+              const all = Array.isArray(data) ? data : (data?.content ?? []);
+              list = all.filter(x => (x.caseNo ?? x.case_no) === caseNoInput.value);
+            }
+            const normalized = list.map(normalizeCase).filter(Boolean)
+              .sort((a, b) => getSortTime(b) - getSortTime(a));
+            await Promise.all(normalized.map(async (c) => {
+              await ensureClinicName(c.clinicNo, c);
+              await ensureDentistName(c.dentistNo, c);
+              await ensureMemberName(c.createdByEmpNo);
+            }));
+            casesRaw.value = normalized;
+            totalCount.value = normalized.length;
+            page.value = 1;
+            serverPaging.value = false;
+            totalPages.value = Math.max(1, Math.ceil(totalCount.value / pageSize.value));
+            applyClientPageSlice();
+            for (const k in expanded) delete expanded[k];
+          } catch (err) {
+            alert("查詢失敗：" + (err?.response?.data?.message || err?.message || "未知錯誤"));
+          }
+        };
+
+        const goEditCase = () => {
+          if (!caseNoInput.value) return;
+          const base = window.EDIT_CASE_URL || "create_case.html";
+          location.href = `${base}?caseNo=${encodeURIComponent(caseNoInput.value)}`;
+        };
+
+        const deleteCase = async () => {
+          if (!caseNoInput.value) return;
+          const cn = caseNoInput.value;
+          if (!confirm(`確定要刪除 Case：${cn}？此動作不可回復。`)) return;
+          try {
+            await axios.delete(`${BASE_URL}/api/cases/${encodeURIComponent(cn)}`);
+            showToast("刪除成功");
+            caseNoInput.value = "";
+            await applyFilters();
+          } catch (err) {
+            alert("刪除失敗：" + (err?.response?.data?.message || err?.message || "未知錯誤"));
+          }
+        };
+
+        // CSV 匯出
+        const exportCSV = (scope = 'page') => {
+          const rows = (scope === 'page') ? pagedCases.value : (serverPaging.value ? pagedCases.value : (casesRaw.value || []));
+          const header = ['id', 'case_no', 'clinic', 'dentist', 'patient_name', 'received_at', 'return_at', 'total_amount', 'created_by'];
+          const lines = [header.join(',')];
+          for (const c of rows) {
+            const line = [
+              safeCSV(c.id ?? ''),
+              safeCSV(c.caseNo ?? ''),
+              safeCSV(clinicNameOf(c.clinicNo)),
+              safeCSV(dentistNameOf(c.dentistNo, c)),
+              safeCSV(c.patientName ?? ''),
+              safeCSV(fmtDateTime(c.receivedAt)),
+              safeCSV(fmtDateTime(c.returnAt)),
+              safeCSV(csvMoney(c.totalAmount)),
+              safeCSV(createdByNameOf(c)),
+            ].join(',');
+            lines.push(line);
+          }
+          const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          const ts = new Date().toISOString().replace(/[-:.TZ]/g, '').slice(0, 14);
+          a.href = url;
+          a.download = (scope === 'page') ? `cases_page_${page.value}_${ts}.csv` : `cases_filtered_${ts}.csv`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        };
+
+        const safeCSV = (val) => {
+          if (val == null) return '';
+          const s = String(val);
+          if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+          return s;
+        };
+
+        // 初始載入
+        onMounted(async () => {
+          if (toastSuccess.value && window.bootstrap && bootstrap.Toast) {
+            toastInstance = bootstrap.Toast.getOrCreateInstance(toastSuccess.value, { delay: 1500 });
+          }
+          await loadClinics();
+          await applyFilters(); // 預設全部（新→舊）
+        });
+        // 額外：layout 所需的狀態與方法（時間、使用者、view 切換）
+        const currentView = ref('case');
+        const currentTime = ref('');
+        const loginUser = ref(localStorage.getItem('loginUser'));
+        const loginRole = ref(localStorage.getItem('loginRole') || 'staff');
+
+
+
+        const timeInterval = setInterval(() => {
+          const now = new Date();
+          const formattedTime = new Intl.DateTimeFormat('zh-TW', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false  // 24小時制
+          }).format(now);
+
+          // 轉換為 "2025-10-16 11:04" 格式
+          currentTime.value = formattedTime.replace(/\//g, '-').slice(0, 16);
+        }, 1000);
+
+        function getViewTitle() {
+          if (currentView.value === 'case') return '訂單管理';
+          return '';
+        }
+
+
+        // 暴露到 template
+        return {
+          currentView, currentTime, loginUser, getViewTitle, loginRole, timeInterval,
+          clinics, dentists, dentistsLoading,
+          filters, onClinicChange, applyFilters,
+
+          cases, pagedCases, page, pageSize, totalPages, totalCount, goPage, pageNumbers, onPageSizeChange,
+
+          fmtMoney, fmtDateTime, pageTotal, filteredTotal,
+
+          clinicNameOf, dentistNameOf, createdByNameOf,
+
+          expanded, ordersMap, ordersLoading, toggleExpand,
+
+          caseNoInput, searchByCaseNo, goEditCase, deleteCase,
+
+          exportCSV,
+
+          itemNameOf,
+
+          toastSuccess
+        };
+      }
+    }).mount('#app');</script>
+</body>
+
+</html>

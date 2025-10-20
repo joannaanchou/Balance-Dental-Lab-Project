@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="zh-Hant">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Balanced Dental Lab｜首頁 Dashboard</title>
+
+  <!-- Bootstrap 5 CSS & Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet" />
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
+
+  <!-- 全站樣式 -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+  <div class="container-fluid">
+    <div class="row g-0">
+
+      <!-- 🔸 側欄插入點 -->
+      <div id="sidebar-container" class="col-md-2 sidebar"></div>
+
+      <!-- 主內容區 -->
+      <main class="col-12 col-md-10 p-3 p-lg-4">
+        <!-- Header -->
+        <div class="header d-flex align-items-center justify-content-between">
+          <div class="brand d-flex align-items-center gap-3">
+            <div class="logo">BL</div>
+            <div>
+              <div class="fw-bold">Balanced Dental Lab</div>
+              <small class="text-secondary">Dashboard</small>
+            </div>
+          </div>
+          <div class="d-flex align-items-center gap-3">
+            <span class="text-muted"><i class="bi bi-clock"></i> <span id="nowTime">--:--</span></span>
+            <span class="badge text-bg-primary">
+              <i class="bi bi-person-circle me-1"></i>
+              <span id="currentUser">載入中…</span>
+            </span>
+          </div>
+        </div>
+
+        <!-- KPI 區塊 -->
+        <div class="row g-3 align-items-stretch mb-3">
+          <div class="col-12 col-lg-5">
+            <div class="card h-100">
+              <div class="card-header fw-bold">今日訂單概況</div>
+              <div class="card-body d-flex justify-content-around flex-wrap">
+
+                <!-- 新增訂單（今天 receivedAt 的總數） -->
+                <div class="kpi d-flex align-items-center gap-3">
+                  <div class="icon rounded-3 p-2 bg-light text-success">
+                    <i class="bi bi-receipt fs-4"></i>
+                  </div>
+                  <div>
+                    <div id="kpiOrdersToday" class="value fs-5 fw-bold mb-0">0</div>
+                    <div class="label small text-muted">新增訂單</div>
+                  </div>
+                </div>
+
+                <!-- 新增一般件（今天新增且 returnAt - receivedAt ≥ 7 天） -->
+                <div class="kpi d-flex align-items-center gap-3">
+                  <div class="icon rounded-3 p-2 bg-light text-secondary">
+                    <i class="bi bi-clipboard-check fs-4"></i>
+                  </div>
+                  <div>
+                    <div id="kpiNormalCount" class="value fs-5 fw-bold mb-0">0</div>
+                    <div class="label small text-muted">新增一般件</div>
+                  </div>
+                </div>
+
+                <!-- 新增急件（今天新增且 returnAt - receivedAt < 7 天） -->
+                <div class="kpi d-flex align-items-center gap-3">
+                  <div class="icon rounded-3 p-2 bg-light text-danger">
+                    <i class="bi bi-lightning-charge-fill fs-4"></i>
+                  </div>
+                  <div>
+                    <div id="kpiRushCount" class="value fs-5 fw-bold mb-0">0</div>
+                    <div class="label small text-muted">新增急件</div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+          <div class="col-12 col-lg-7">
+            <div class="card h-100">
+              <div class="card-header fw-bold">公告 / 快速操作</div>
+              <div class="card-body">
+                <ul id="noticeList" class="mb-3 small text-secondary ps-3"></ul>
+                <div class="d-flex gap-2 flex-wrap">
+                  <a href="create_case.html" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>建立訂單</a>
+                  <a href="list_cases.html" class="btn btn-outline-primary"><i
+                      class="bi bi-journal-text me-1"></i>訂單管理</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 診所營收佔比 -->
+        <div class="row g-3 align-items-stretch mb-3">
+          <div class="col-12">
+            <div class="card h-100">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <div class="fw-bold">診所營收佔比</div>
+                <div class="d-flex align-items-center gap-2">
+                  <label class="text-secondary small">區間：</label>
+                  <select id="revRange" class="form-select form-select-sm" style="width:auto">
+                    <option value="30">近 30 天</option>
+                    <option value="90" selected>近 90 天</option>
+                    <option value="180">近 180 天</option>
+                    <option value="365">近 365 天</option>
+                  </select>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="row g-3">
+                  <div class="col-12 col-lg-8">
+                    <div style="width:100%; height:280px; display:flex; align-items:center; justify-content:center;">
+                      <canvas id="clinicRevenuePie" style="width:100%; height:100%;"></canvas>
+                    </div>
+                  </div>
+                  <div class="col-12 col-lg-4">
+                    <div class="small text-secondary mb-2">診所清單</div>
+                    <div id="clinicLegend" class="vstack gap-2"></div>
+
+                    <!-- ✅ 新增：清單分頁控制（只影響右側清單，不影響左側圓餅圖） -->
+                    <div id="legendPager" class="d-flex align-items-center justify-content-between mt-2"
+                      aria-label="診所清單分頁">
+                      <button id="legendPrev" type="button" class="btn btn-sm btn-outline-secondary" aria-label="上一頁">
+                        <i class="bi bi-chevron-left"></i>
+                      </button>
+                      <span id="legendPageInfo" class="small text-secondary">第 1 / 1 頁</span>
+                      <button id="legendNext" type="button" class="btn btn-sm btn-outline-secondary" aria-label="下一頁">
+                        <i class="bi bi-chevron-right"></i>
+                      </button>
+                    </div>
+                    <!-- ✅ end 新增 -->
+
+                    <div class="mt-3 small text-secondary" id="revNote">
+                      * 提示：滑鼠移到圖上可查看金額與佔比
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 最近病例 -->
+        <div class="card">
+          <div class="card-header fw-bold d-flex justify-content-between align-items-center">
+            近期訂單
+            <a href="list_cases.html" class="btn btn-sm btn-primary"><i class="bi bi-collection me-1"></i>訂單列表</a>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead>
+                <tr>
+                  <th>訂單編號</th>
+                  <th>患者</th>
+                  <th>診所 / 醫師</th>
+                  <th>收件日</th>
+                  <th>預計回件</th>
+                  <th>狀態</th>
+                </tr>
+              </thead>
+              <tbody id="recentCasesTbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- Vue（若有用得到） -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+  <!-- 全域登入/登出等（與 dentalmain 一致） -->
+  <script src="product_management.js"></script>
+
+  <!-- ✅ 指定後端位址 -->
+  <script>window.API_BASE_URL = "http://localhost:8080";</script>
+
+  <!-- 首頁邏輯（新版，請一併覆蓋） -->
+  <script src="js/home.js"></script>
+
+  <!-- 🔒 側欄載入與登出事件綁定 -->
+  <script type="module">
+    import { sidebarTemplate } from './js/sidebar.js';
+    const sidebarContainer = document.querySelector('#sidebar-container');
+    sidebarContainer.innerHTML = sidebarTemplate;
+
+    const logoutBtn = sidebarContainer.querySelector('#logoutBtn');
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (confirm('確定要登出嗎？')) {
+          try {
+            localStorage.removeItem('user');
+            localStorage.removeItem('loginUser');
+            localStorage.removeItem('loginRole');
+            localStorage.removeItem('loginEmpNo');
+            sessionStorage.clear?.();
+          } catch (_) { }
+          window.location.href = 'login.html';
+        }
+      });
+    }
+  </script>
+</body>
+
+</html>

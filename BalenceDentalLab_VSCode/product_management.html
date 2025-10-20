@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Balanced Dental Lab｜產品管理</title>
+
+  <!-- 與 home.html 對齊的版本 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet" />
+
+  <!-- 全站主題（請確保其他頁也統一只載入這支） -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+  <div id="app">
+    <div class="container-fluid">
+      <div class="row g-0">
+        <!-- 左側 Sidebar 插入點（與 home.html 一致） -->
+        <div id="sidebar-container" class="col-md-2 sidebar"></div>
+
+        <!-- 右側主內容 -->
+        <main class="col-12 col-md-10 p-3 p-lg-4">
+          <!-- Header（與 home.html 視覺一致） -->
+          <div class="header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 d-flex align-items-center gap-2">
+              <i class="bi bi-boxes"></i>
+              {{ getViewTitle() }}
+            </h5>
+            <div class="d-flex align-items-center gap-3">
+              <span class="text-muted"><i class="bi bi-clock"></i> {{ currentTime }}</span>
+              <span class="badge text-bg-primary"><i class="bi bi-person-circle"></i> {{ loginUser }}</span>
+            </div>
+          </div>
+
+          <!-- 內容區 -->
+          <div class="content-area">
+            <!-- 產品類別管理 -->
+            <div v-if="currentView === 'category'">
+              <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                  <span><i class="bi bi-folder-fill me-1"></i> 產品類別</span>
+                  <button class="btn btn-light btn-sm" @click="openCategoryModal()">
+                    <i class="bi bi-plus-circle"></i> 新增類別
+                  </button>
+                </div>
+                <div class="card-body">
+                  <div class="row mb-3">
+                    <div class="col-md-4">
+                      <input type="text" class="form-control" v-model="categorySearch" placeholder="搜尋類別編號或名稱...">
+                    </div>
+                  </div>
+                  <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                      <thead class="table-light">
+                        <tr>
+                          <th>ID</th>
+                          <th>類別編號</th>
+                          <th>類別名稱</th>
+                          <th style="width: 150px;">操作</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr v-for="cat in filteredCategories" :key="cat.id">
+                          <td>{{ cat.id }}</td>
+                          <td>{{ cat.categoryNo }}</td>
+                          <td>{{ cat.name }}</td>
+                          <td>
+                            <button class="btn btn-sm btn-warning me-1" @click="openCategoryModal(cat)">
+                              <i class="bi bi-pencil"></i>
+                            </button>
+                            <button class="btn btn-sm btn-danger" @click="deleteCategory(cat.id)">
+                              <i class="bi bi-trash"></i>
+                            </button>
+                          </td>
+                        </tr>
+                        <tr v-if="filteredCategories.length === 0">
+                          <td colspan="4" class="text-center text-muted">暫無資料</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 產品項目管理 -->
+            <div v-if="currentView === 'item'">
+              <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                  <span><i class="bi bi-box-seam-fill me-1"></i> 產品項目</span>
+                  <button class="btn btn-light btn-sm" @click="openItemModal()">
+                    <i class="bi bi-plus-circle"></i> 新增項目
+                  </button>
+                </div>
+                <div class="card-body">
+                  <div class="row mb-3">
+                    <div class="col-md-4">
+                      <input type="text" class="form-control" v-model="itemSearch" placeholder="搜尋項目編號或名稱...">
+                    </div>
+                  </div>
+                  <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                      <thead class="table-light">
+                        <tr>
+                          <th>ID</th>
+                          <th>項目編號</th>
+                          <th>項目名稱</th>
+                          <th style="width: 150px;">操作</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr v-for="item in filteredItems" :key="item.id">
+                          <td>{{ item.id }}</td>
+                          <td>{{ item.itemNo }}</td>
+                          <td>{{ item.name }}</td>
+                          <td>
+                            <button class="btn btn-sm btn-warning me-1" @click="openItemModal(item)">
+                              <i class="bi bi-pencil"></i>
+                            </button>
+                            <button class="btn btn-sm btn-danger" @click="deleteItem(item.id)">
+                              <i class="bi bi-trash"></i>
+                            </button>
+                          </td>
+                        </tr>
+                        <tr v-if="filteredItems.length === 0">
+                          <td colspan="4" class="text-center text-muted">暫無項目資料</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 產品明細管理 -->
+            <div v-if="currentView === 'detail'">
+              <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                  <span><i class="bi bi-clipboard-data-fill me-1"></i> 產品總表</span>
+                  <button class="btn btn-light btn-sm" @click="openDetailModal()">
+                    <i class="bi bi-plus-circle"></i> 新增明細
+                  </button>
+                </div>
+                <div class="card-body">
+                  <div class="row mb-3">
+                    <div class="col-md-4">
+                      <input type="text" class="form-control" v-model="detailSearch" placeholder="搜尋產品編號、類別或項目...">
+                    </div>
+                  </div>
+                  <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                      <thead class="table-light">
+                        <tr>
+                          <th>ID</th>
+                          <th>產品編號</th>
+                          <th>產品類別</th>
+                          <th>產品項目</th>
+                          <th class="text-end">價格</th>
+                          <th style="width: 150px;">操作</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr v-for="detail in filteredDetails" :key="detail.id">
+                          <td>{{ detail.id }}</td>
+                          <td>{{ detail.productNo }}</td>
+                          <td>{{ detail.category.name }}</td>
+                          <td>{{ detail.item.name }}</td>
+                          <td class="text-end">NT$ {{ formatPrice(detail.price) }}</td>
+                          <td>
+                            <button class="btn btn-sm btn-warning me-1" @click="openDetailModal(detail)">
+                              <i class="bi bi-pencil"></i>
+                            </button>
+                            <button class="btn btn-sm btn-danger" @click="deleteDetail(detail.id)">
+                              <i class="bi bi-trash"></i>
+                            </button>
+                          </td>
+                        </tr>
+                        <tr v-if="filteredDetails.length === 0">
+                          <td colspan="6" class="text-center text-muted">暫無產品資料</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div><!-- /content-area -->
+        </main>
+      </div><!-- /row -->
+    </div><!-- /container-fluid -->
+
+    <!-- === 權限 Guard Overlay（樣式已在 styles.css） === -->
+    <div v-if="showGuard" class="guard-overlay" role="dialog" aria-modal="true" aria-labelledby="guardTitle"
+      aria-describedby="guardDesc">
+      <div class="guard-panel">
+        <div class="guard-head">
+          <div class="guard-icon"><i class="bi bi-shield-lock-fill" aria-hidden="true"></i></div>
+          <div class="guard-chip"><i class="bi bi-exclamation-diamond-fill"></i> 權限警示</div>
+        </div>
+        <h5 id="guardTitle" class="guard-title">{{ guardTitle }}</h5>
+        <p id="guardDesc" class="guard-desc mb-0">
+          目前以 <strong>{{ currentUser.role }}</strong> 身份登入，無法執行
+          <strong>{{ guardActionName }}</strong>。此操作需要
+          <span class="code">{{ guardRequiredRoles.join(' / ') }}</span> 權限。
+        </p>
+        <div class="guard-actions">
+          <button class="btn btn-guard-primary" @click="closeGuard">我知道了</button>
+          <button class="btn btn-outline-secondary btn-guard-outline" @click="logout">
+            <i class="bi bi-box-arrow-right me-1"></i> 登出並重新登入
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Teleport：三個產品 Modal（藍底表頭、與其它頁一致） -->
+    <teleport to="body">
+      <!-- 類別 Modal -->
+      <div class="modal fade" id="categoryModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+              <h5 class="modal-title">{{ categoryForm.id ? '編輯類別' : '新增類別' }}</h5>
+              <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <div v-if="categoryForm.id" class="mb-3">
+                <label class="form-label">類別編號</label>
+                <input type="text" class="form-control" v-model="categoryForm.categoryNo" readonly>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">類別名稱 <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" v-model="categoryForm.name" required>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+              <button class="btn btn-primary" @click="saveCategory"><i class="bi bi-check-circle"></i> 儲存</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 項目 Modal -->
+      <div class="modal fade" id="itemModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+              <h5 class="modal-title">{{ itemForm.id ? '編輯項目' : '新增項目' }}</h5>
+              <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <div v-if="itemForm.id" class="mb-3">
+                <label class="form-label">項目編號</label>
+                <input type="text" class="form-control" v-model="itemForm.itemNo" readonly>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">項目名稱 <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" v-model="itemForm.name" required>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+              <button class="btn btn-primary" @click="saveItem"><i class="bi bi-check-circle"></i> 儲存</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 明細 Modal -->
+      <div class="modal fade" id="detailModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+              <h5 class="modal-title">{{ detailForm.id ? '編輯產品明細' : '新增產品明細' }}</h5>
+              <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <div v-if="detailForm.id" class="mb-3">
+                <label class="form-label">產品編號</label>
+                <input type="text" class="form-control" v-model="detailForm.productNo" readonly>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">產品類別 <span class="text-danger">*</span></label>
+                <select class="form-select" v-model="detailForm.category" required>
+                  <option value="">請選擇類別</option>
+                  <option v-for="cat in categories" :key="cat.id" :value="cat">
+                    {{ cat.categoryNo }} - {{ cat.name }}
+                  </option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">產品項目 <span class="text-danger">*</span></label>
+                <select class="form-select" v-model="detailForm.item" required>
+                  <option value="">請選擇項目</option>
+                  <option v-for="item in items" :key="item.id" :value="item">
+                    {{ item.itemNo }} - {{ item.name }}
+                  </option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">價格 <span class="text-danger">*</span></label>
+                <input type="number" step="0.01" class="form-control" v-model="detailForm.price" required>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+              <button class="btn btn-primary" @click="saveDetail"><i class="bi bi-check-circle"></i> 儲存</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </teleport>
+  </div><!-- /#app -->
+
+  <!-- JS（與 home.html 對齊） -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+  <!-- Sidebar 模組插入＋登出（與 home.html 一致） -->
+  <script type="module">
+    import { sidebarTemplate } from './js/sidebar.js';
+    const sidebarContainer = document.querySelector('#sidebar-container');
+    sidebarContainer.innerHTML = sidebarTemplate;
+
+    const logoutBtn = sidebarContainer.querySelector('#logoutBtn');
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (confirm('確定要登出嗎？')) {
+          try {
+            localStorage.removeItem('user');
+            localStorage.removeItem('loginUser');
+            localStorage.removeItem('loginRole');
+            localStorage.removeItem('loginEmpNo');
+            sessionStorage.clear?.();
+          } catch (_) { }
+          window.location.href = 'login.html';
+        }
+      });
+    }
+  </script>
+
+  <!-- Vue App（整合你原本的邏輯，去除重複版本） -->
+  <script>
+    const { createApp } = Vue;
+
+    createApp({
+      data() {
+        return {
+          // auth
+          currentUser: JSON.parse(localStorage.getItem('user') || '{"username":"","role":"staff"}'),
+          showGuard: false,
+          guardTitle: '您的權限不足',
+          guardActionName: '',
+          guardRequiredRoles: ['admin'],
+
+          // API
+          apiBase: 'http://localhost:8080/api',
+
+          // 系統資訊
+          loginUser: '訪客',
+          currentTime: '',
+          currentView: 'category', // category | item | detail
+
+          // 清單
+          categories: [],
+          items: [],
+          details: [],
+
+          // 搜尋
+          categorySearch: '',
+          itemSearch: '',
+          detailSearch: '',
+
+          // 表單
+          categoryForm: { id: null, categoryNo: '', name: '' },
+          itemForm: { id: null, itemNo: '', name: '' },
+          detailForm: { id: null, productNo: '', category: '', item: '', price: 0 },
+        };
+      },
+
+      computed: {
+        filteredCategories() {
+          if (!this.categorySearch) return this.categories;
+          const s = this.categorySearch.toLowerCase();
+          return this.categories.filter(c =>
+            (c.categoryNo || '').toLowerCase().includes(s) ||
+            (c.name || '').toLowerCase().includes(s)
+          );
+        },
+        filteredItems() {
+          if (!this.itemSearch) return this.items;
+          const s = this.itemSearch.toLowerCase();
+          return this.items.filter(i =>
+            (i.itemNo || '').toLowerCase().includes(s) ||
+            (i.name || '').toLowerCase().includes(s)
+          );
+        },
+        filteredDetails() {
+          if (!this.detailSearch) return this.details;
+          const s = this.detailSearch.toLowerCase();
+          return this.details.filter(d =>
+            (d.productNo || '').toLowerCase().includes(s) ||
+            (d.category?.name || '').toLowerCase().includes(s) ||
+            (d.item?.name || '').toLowerCase().includes(s)
+          );
+        },
+      },
+
+      methods: {
+
+        updateTime() {
+          const d = new Date();
+          this.currentTime = `${d.getFullYear()}-${this.p2(d.getMonth() + 1)}-${this.p2(d.getDate())} ${this.p2(d.getHours())}:${this.p2(d.getMinutes())}`;
+        },
+
+        // 格式化數字為兩位數
+        p2(n) {
+          return n < 10 ? `0${n}` : `${n}`;
+        },
+
+
+
+        getViewTitle() {
+          return { category: '產品類別', item: '產品項目', detail: '產品總表' }[this.currentView] || '';
+        },
+
+        formatPrice(p) { return parseFloat(p || 0).toLocaleString('zh-TW', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); },
+
+        // auth helpers
+        syncCurrentUserFromStorage() {
+          try {
+            const uObj = JSON.parse(localStorage.getItem('user') || '{}');
+            const fUser = localStorage.getItem('loginUser');
+            const fRole = localStorage.getItem('loginRole');
+            const username = (uObj.username || uObj.name || fUser || '訪客').toString();
+            const role = (uObj.role || fRole || 'guest').toString().toLowerCase();
+            this.currentUser = { username, role };
+            this.loginUser = `${username}${role ? '｜' + role : ''}`;
+          } catch (e) {
+            this.currentUser = { username: '訪客', role: 'guest' };
+            this.loginUser = '訪客';
+          }
+        },
+        requireRoles(roles, actionName, onAllowed) {
+          this.syncCurrentUserFromStorage();
+          const role = String(this.currentUser?.role || '').toLowerCase();
+          const ok = roles.map(r => String(r).toLowerCase()).includes(role);
+          if (ok) onAllowed && onAllowed();
+          else {
+            this.guardActionName = actionName || '此操作';
+            this.guardRequiredRoles = roles;
+            this.showGuard = true;
+          }
+        },
+        requireAdmin(actionName, onAllowed) { this.requireRoles(['admin'], actionName, onAllowed); },
+        closeGuard() { this.showGuard = false; },
+        logout() {
+          try {
+            localStorage.removeItem('user');
+            localStorage.removeItem('loginUser');
+            localStorage.removeItem('loginRole');
+            localStorage.removeItem('loginEmpNo');
+            sessionStorage.clear?.();
+          } catch (e) { }
+          window.location.href = 'login.html';
+        },
+
+        // APIs
+        async loadCategories() { const r = await fetch(`${this.apiBase}/categories`); if (!r.ok) throw new Error(r.status); this.categories = await r.json(); },
+        async loadItems() { const r = await fetch(`${this.apiBase}/items`); if (!r.ok) throw new Error(r.status); this.items = await r.json(); },
+        async loadDetails() { const r = await fetch(`${this.apiBase}/details`); if (!r.ok) throw new Error(r.status); this.details = await r.json(); },
+
+        // open modals (admin only)
+        openCategoryModal(category = null) {
+          const show = () => {
+            this.categoryForm = category ? { ...category } : { id: null, categoryNo: '', name: '' };
+            new bootstrap.Modal(document.getElementById('categoryModal')).show();
+          };
+          category ? this.requireAdmin('編輯類別', show) : this.requireAdmin('新增類別', show);
+        },
+        openItemModal(item = null) {
+          const show = () => {
+            this.itemForm = item ? { ...item } : { id: null, itemNo: '', name: '' };
+            new bootstrap.Modal(document.getElementById('itemModal')).show();
+          };
+          item ? this.requireAdmin('編輯項目', show) : this.requireAdmin('新增項目', show);
+        },
+        openDetailModal(detail = null) {
+          const show = () => {
+            this.detailForm = detail ? { ...detail } : { id: null, productNo: '', category: '', item: '', price: 0 };
+            new bootstrap.Modal(document.getElementById('detailModal')).show();
+          };
+          detail ? this.requireAdmin('編輯產品明細', show) : this.requireAdmin('新增產品明細', show);
+        },
+
+        // save
+        async saveCategory() {
+          if (!this.categoryForm.name) { alert('請填寫類別名稱'); return; }
+          const isEdit = !!this.categoryForm.id;
+          const url = isEdit ? `${this.apiBase}/categories/${this.categoryForm.id}` : `${this.apiBase}/categories`;
+          const method = isEdit ? 'PUT' : 'POST';
+          const payload = isEdit ? { name: this.categoryForm.name, categoryNo: this.categoryForm.categoryNo } : { name: this.categoryForm.name };
+          const r = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+          if (!r.ok) return alert('儲存失敗');
+          await this.loadCategories();
+          bootstrap.Modal.getInstance(document.getElementById('categoryModal')).hide();
+        },
+        async saveItem() {
+          if (!this.itemForm.name) { alert('請填寫項目名稱'); return; }
+          const isEdit = !!this.itemForm.id;
+          const url = isEdit ? `${this.apiBase}/items/${this.itemForm.id}` : `${this.apiBase}/items`;
+          const method = isEdit ? 'PUT' : 'POST';
+          const payload = { ...this.itemForm };
+          if (!isEdit) delete payload.itemNo;
+          const r = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+          if (!r.ok) return alert('儲存失敗');
+          await this.loadItems();
+          bootstrap.Modal.getInstance(document.getElementById('itemModal')).hide();
+        },
+        async saveDetail() {
+          const isEdit = !!this.detailForm.id;
+          if (!this.detailForm.category || !this.detailForm.item || this.detailForm.price == null) {
+            alert('請填寫所有欄位'); return;
+          }
+          if (this.detailForm.price <= 0) { alert('價格必須大於 0'); return; }
+          const duplicate = this.details.some(d =>
+            d.category?.categoryNo === this.detailForm.category?.categoryNo &&
+            d.item?.itemNo === this.detailForm.item?.itemNo &&
+            (!isEdit || d.id !== this.detailForm.id)
+          );
+          if (duplicate) { alert('此產品類別與項目的組合已存在'); return; }
+
+          const url = isEdit ? `${this.apiBase}/details/${this.detailForm.id}` : `${this.apiBase}/details`;
+          const method = isEdit ? 'PUT' : 'POST';
+          const payload = { ...this.detailForm };
+          if (!isEdit) delete payload.productNo;
+          const r = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+          if (!r.ok) return alert('儲存失敗');
+          await this.loadDetails();
+          bootstrap.Modal.getInstance(document.getElementById('detailModal')).hide();
+        },
+
+        // delete
+        async deleteCategory(id) {
+          this.requireAdmin('刪除類別', async () => {
+            if (!confirm('確定要刪除此類別嗎？')) return;
+            const r = await fetch(`${this.apiBase}/categories/${id}`, { method: 'DELETE' });
+            if (!r.ok && r.status !== 204) return alert('刪除失敗');
+            this.categories = this.categories.filter(c => c.id !== id);
+          });
+        },
+        async deleteItem(id) {
+          this.requireAdmin('刪除項目', async () => {
+            if (!confirm('確定要刪除此項目嗎？')) return;
+            const r = await fetch(`${this.apiBase}/items/${id}`, { method: 'DELETE' });
+            if (!r.ok && r.status !== 204) return alert('刪除失敗');
+            this.items = this.items.filter(i => i.id !== id);
+          });
+        },
+        async deleteDetail(id) {
+          this.requireAdmin('刪除產品明細', async () => {
+            if (!confirm('確定要刪除此產品明細嗎？')) return;
+            const r = await fetch(`${this.apiBase}/details/${id}`, { method: 'DELETE' });
+            if (!r.ok && r.status !== 204) return alert('刪除失敗');
+            this.details = this.details.filter(d => d.id !== id);
+          });
+        },
+      },
+
+      async mounted() {
+        this.syncCurrentUserFromStorage();
+        this.updateTime();  // 初始化時也更新一次
+        this.timeInterval = setInterval(this.updateTime, 1000); // 每秒更新一次時間
+        const params = new URLSearchParams(window.location.search);
+        const view = params.get('view');
+        if (view) this.currentView = view;
+
+        await Promise.all([this.loadCategories(), this.loadItems(), this.loadDetails()]);
+      }
+    }).mount('#app');
+  </script>
+</body>
+
+</html>

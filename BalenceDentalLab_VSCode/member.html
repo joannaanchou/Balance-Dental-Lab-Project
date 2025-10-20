@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Balanced Dental Lab｜會員管理</title>
+
+  <!-- 與 customer_management.html 對齊的套件版本 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet" />
+
+  <!-- 全站主題（只載這支） -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+  <div id="app">
+    <div class="container-fluid">
+      <div class="row g-0">
+        <!-- 左側 Sidebar（與 customer_management/home 相同插入點與 class） -->
+        <div id="sidebar-container" class="col-md-2 sidebar"></div>
+
+        <!-- 右側主內容（對齊：p-3 p-lg-4 外距、header 卡片風格一樣） -->
+        <main class="col-12 col-md-10 p-3 p-lg-4">
+          <div class="header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 d-flex align-items-center gap-2">
+              <i class="bi bi-people"></i>
+              {{ getViewTitle() }}
+            </h5>
+            <div class="d-flex align-items-center gap-3">
+              <span class="text-muted"><i class="bi bi-clock"></i> {{ currentTime }}</span>
+              <span class="badge text-bg-primary"><i class="bi bi-person-circle"></i> {{ loginUser }}</span>
+            </div>
+          </div>
+
+          <!-- 內容區（僅列表；動作按鈕保留原本權限阻擋邏輯） -->
+          <div class="content-area">
+            <div class="card">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-people"></i> 會員列表</span>
+                <button class="btn btn-light btn-sm" @click="requireAdmin('新增會員', () => openMemberModal())">
+                  <i class="bi bi-plus-circle"></i> 新增會員
+                </button>
+              </div>
+
+              <div class="card-body">
+                <div class="row mb-3">
+                  <div class="col-md-4">
+                    <input type="text" class="form-control" v-model="memberSearch" placeholder="搜尋員工編號、帳號或姓名...">
+                  </div>
+                </div>
+
+                <div class="table-responsive">
+                  <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                      <tr>
+                        <th>ID</th>
+                        <th>員工編號</th>
+                        <th>帳號</th>
+                        <th>姓名</th>
+                        <th>角色</th>
+                        <th>是否在職</th>
+                        <th style="width:150px;">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="m in filteredMembers" :key="m.id">
+                        <td>{{ m.id }}</td>
+                        <td>{{ m.empNo }}</td>
+                        <td>{{ m.username }}</td>
+                        <td>{{ m.name }}</td>
+                        <td>{{ m.role }}</td>
+                        <td>{{ m.isActive ? '是' : '否' }}</td>
+                        <td>
+                          <button class="btn btn-sm btn-warning me-1"
+                            @click="requireAdmin('編輯會員', () => openMemberModal(m))">
+                            <i class="bi bi-pencil"></i>
+                          </button>
+                          <button class="btn btn-sm btn-danger" @click="requireAdmin('刪除會員', () => deleteMember(m.id))">
+                            <i class="bi bi-trash"></i>
+                          </button>
+                        </td>
+                      </tr>
+                      <tr v-if="filteredMembers.length===0">
+                        <td colspan="7" class="text-center text-muted">暫無會員資料</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div> <!-- /card-body -->
+            </div> <!-- /card -->
+          </div> <!-- /content-area -->
+        </main>
+      </div> <!-- /row -->
+    </div> <!-- /container-fluid -->
+
+    <!-- ========= 下面區塊：完全保留你現有「阻擋/Guard」設計，不做任何變更 ========= -->
+
+    <!-- 整頁權限遮罩（保留原本互動與樣式） -->
+    <div v-if="!isAuthorized || showGuard" class="guard-overlay" role="dialog" aria-modal="true"
+      aria-labelledby="guardTitle" aria-describedby="guardDesc">
+      <div class="guard-panel">
+        <div class="guard-head">
+          <div class="guard-icon"><i class="bi bi-shield-lock-fill" aria-hidden="true"></i></div>
+          <div class="guard-chip"><i class="bi bi-exclamation-diamond-fill"></i> 權限警示</div>
+        </div>
+        <h5 id="guardTitle" class="guard-title">{{ guardTitle }}</h5>
+        <p id="guardDesc" class="guard-desc mb-0">
+          目前以 <strong>{{ currentUser.role }}</strong> 身份登入，無法瀏覽或執行
+          <strong>{{ guardActionName || '會員管理' }}</strong>。此區需要
+          <span class="code">{{ guardRequiredRoles.join(' / ') }}</span> 權限。
+        </p>
+        <div class="guard-actions">
+          <button class="btn btn-guard-primary" @click="closeGuard">我知道了</button>
+          <button class="btn btn-outline-secondary btn-guard-outline" @click="logout">
+            <i class="bi bi-box-arrow-right me-1"></i> 登出並重新登入
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 會員 Modal（表頭深色＋白色關閉鈕，保留） -->
+    <div class="modal fade" id="memberModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header bg-primary text-white">
+            <h5 class="modal-title">{{ memberForm.id?'編輯會員':'新增會員' }}</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+
+            <div class="mb-3"><label class="form-label">帳號</label><input type="text" class="form-control"
+                v-model="memberForm.username"></div>
+            <div class="mb-3"><label class="form-label">密碼</label><input type="password" class="form-control"
+                v-model="memberForm.password"></div>
+            <div class="mb-3"><label class="form-label">姓名</label><input type="text" class="form-control"
+                v-model="memberForm.name"></div>
+            <div class="mb-3">
+              <label class="form-label">角色</label>
+              <select class="form-select" v-model="memberForm.role">
+                <option value="staff">staff</option>
+                <option value="admin">admin</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">是否在職</label>
+              <select class="form-select" v-model="memberForm.isActive">
+                <option :value="true">是</option>
+                <option :value="false">否</option>
+              </select>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+            <button class="btn btn-primary" @click="saveMember()">儲存</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div> <!-- /#app -->
+
+  <!-- JS 套件（與 customer_management.html 對齊） -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://unpkg.com/vue@3.3.4/dist/vue.global.js"></script>
+
+  <!-- Sidebar 模組插入＋登出（同站統一） -->
+  <script type="module">
+    import { sidebarTemplate } from './js/sidebar.js';
+    const sidebarContainer = document.querySelector('#sidebar-container');
+    sidebarContainer.innerHTML = sidebarTemplate;
+
+    const logoutBtn = sidebarContainer.querySelector('#logoutBtn');
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (confirm('確定要登出嗎？')) {
+          try {
+            localStorage.removeItem('user');
+            localStorage.removeItem('loginUser');
+            localStorage.removeItem('loginRole');
+            localStorage.removeItem('loginEmpNo');
+            sessionStorage.clear?.();
+          } catch (_) { }
+          window.location.href = 'login.html';
+        }
+      });
+    }
+  </script>
+
+  <!-- Vue App（保留你原本的 Guard 行為；僅調整 layout 相關） -->
+  <script>
+    Vue.createApp({
+      data() {
+        return {
+          // （保留）AUTH GUARD 資料
+          currentUser: { username: '訪客', role: 'guest' },
+          showGuard: false,
+          guardTitle: '您的權限不足',
+          guardActionName: '',
+          guardRequiredRoles: ['admin'],
+          requiredRoles: ['admin'],
+          HOME_URL: 'home.html',
+
+          // layout 顯示
+          currentTime: '',
+          loginUser: '訪客',
+
+          // 列表/表單
+          members: [],
+          memberForm: { role: 'staff', isActive: true },
+          memberSearch: '',
+        }
+      },
+
+      computed: {
+        filteredMembers() {
+          if (!this.memberSearch) return this.members;
+          const s = this.memberSearch.toLowerCase();
+          return this.members.filter(m =>
+            (m.empNo && String(m.empNo).toLowerCase().includes(s)) ||
+            (m.username && m.username.toLowerCase().includes(s)) ||
+            (m.name && m.name.toLowerCase().includes(s))
+          );
+        },
+        isAuthorized() {
+          const role = String(this.currentUser?.role || 'guest').toLowerCase();
+          return this.requiredRoles.map(r => String(r).toLowerCase()).includes(role);
+        },
+      },
+
+      methods: {
+        updateTime() {
+          const d = new Date();
+          this.currentTime = `${d.getFullYear()}-${this.p2(d.getMonth() + 1)}-${this.p2(d.getDate())} ${this.p2(d.getHours())}:${this.p2(d.getMinutes())}`;
+        },
+
+        // 格式化數字為兩位數
+        p2(n) {
+          return n < 10 ? `0${n}` : `${n}`;
+        },
+
+
+
+
+
+        getViewTitle() { return '會員管理'; },
+
+        // （保留）同步使用者與 Guard 行為
+        syncCurrentUserFromStorage() {
+          try {
+            const uObj = JSON.parse(localStorage.getItem('user') || '{}');
+            const fallbackUsername = localStorage.getItem('loginUser') || localStorage.getItem('loginEmpNo');
+            const fallbackRole = localStorage.getItem('loginRole');
+            const username = (uObj.username || uObj.name || fallbackUsername || '訪客').toString();
+            const role = (uObj.role || fallbackRole || 'guest').toString().toLowerCase();
+            this.currentUser = { username, role };
+            this.loginUser = `${username}${role ? '｜' + role : ''}`;
+          } catch (e) {
+            this.currentUser = { username: '訪客', role: 'guest' };
+            this.loginUser = '訪客';
+          }
+        },
+        requireRoles(roles, actionName, onAllowed) {
+          this.syncCurrentUserFromStorage();
+          const role = String(this.currentUser?.role || '').toLowerCase();
+          const ok = roles.map(r => String(r).toLowerCase()).includes(role);
+          if (ok) onAllowed && onAllowed();
+          else {
+            this.guardActionName = actionName || '此操作';
+            this.guardRequiredRoles = roles;
+            this.showGuard = true;
+          }
+        },
+        requireAdmin(actionName, onAllowed) { this.requireRoles(['admin'], actionName, onAllowed); },
+        closeGuard() {
+          if (!this.isAuthorized) {
+            window.location.replace(this.HOME_URL);
+          } else {
+            this.showGuard = false;
+          }
+        },
+        logout() {
+          if (confirm('確定要登出嗎？')) {
+            try {
+              localStorage.removeItem('user');
+              localStorage.removeItem('loginUser');
+              localStorage.removeItem('loginRole');
+              localStorage.removeItem('loginEmpNo');
+              sessionStorage.clear?.();
+            } catch (e) { }
+            window.location.replace('login.html');
+          }
+        },
+
+        // API（與你現有後端路徑一致）
+        fetchMembers() {
+          fetch('http://localhost:8080/api/member')
+            .then(r => {
+              if (!r.ok) throw new Error('讀取會員失敗');
+              return r.json();
+            })
+            .then(d => this.members = d)
+            .catch(() => this.members = []);
+        },
+
+        // Modal + CRUD（保留原權限節奏）
+        openMemberModal(m = null) {
+          this.memberForm = m ? { ...m } : { isActive: true, role: 'staff' };
+          new bootstrap.Modal(document.getElementById('memberModal')).show();
+        },
+        saveMember() {
+          const url = this.memberForm.id ? `http://localhost:8080/api/member/${this.memberForm.id}` : 'http://localhost:8080/api/member/register';
+
+          const sendData = { ...this.memberForm };
+          delete sendData.empNo; // 不送 empNo
+
+          fetch(url, {
+            method: this.memberForm.id ? 'PUT' : 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(sendData)
+          })
+            .then(async (response) => {
+              if (!response.ok) {
+                // 從後端取錯誤訊息（假設是 JSON）
+                const errorData = await response.json();
+                throw new Error(errorData.message || '儲存失敗');
+              }
+              return response.json();
+            })
+            .then(data => {
+              // 成功訊息
+              alert('儲存成功');
+              this.fetchMembers();
+              bootstrap.Modal.getInstance(document.getElementById('memberModal')).hide();
+            })
+            .catch(err => {
+              // 失敗訊息
+              alert('錯誤：' + err.message);
+              console.error('儲存失敗', err);
+            });
+        },
+        deleteMember(id) {
+          this.requireAdmin('刪除會員', () => {
+            if (confirm('確定刪除嗎？')) {
+              fetch(`http://localhost:8080/api/member/${id}`, { method: 'DELETE' })
+                .then(() => this.fetchMembers())
+                .catch(() => alert('刪除失敗'));
+            }
+          });
+        }
+      },
+
+      mounted() {
+        // 同步登入者（右上角名稱 / 權限）
+        this.syncCurrentUserFromStorage();
+
+        // staff 進入：依你原本邏輯顯示遮罩（不改動）
+        if (!this.isAuthorized) {
+          this.guardActionName = '會員管理';
+        }
+
+        this.fetchMembers();
+        this.updateTime();  // 初始化時也更新一次
+        this.timeInterval = setInterval(this.updateTime, 1000); // 每秒更新一次時間
+      }
+    }).mount('#app');
+  </script>
+</body>
+
+</html>

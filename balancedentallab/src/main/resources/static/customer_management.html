@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Balanced Dental Lab｜診所／醫師</title>
+
+  <!-- 與 home.html 對齊 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet" />
+
+  <!-- 全站主題：統一只載這支 -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+  <div id="app">
+    <div class="container-fluid">
+      <div class="row g-0">
+        <!-- 左側 Sidebar 插入點（與 home.html 一致） -->
+        <div id="sidebar-container" class="col-md-2 sidebar"></div>
+
+        <!-- 右側主內容 -->
+        <main class="col-12 col-md-10 p-3 p-lg-4">
+          <!-- Header（與 home.html 視覺一致） -->
+          <div class="header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 d-flex align-items-center gap-2">
+              <i class="bi bi-speedometer2"></i>
+              {{ getViewTitle() }}
+            </h5>
+            <div class="d-flex align-items-center gap-3">
+              <span class="text-muted"><i class="bi bi-clock"></i> {{ currentTime }}</span>
+              <span class="badge text-bg-primary"><i class="bi bi-person-circle"></i> {{ loginUser }}</span>
+            </div>
+          </div>
+
+          <!-- 內容區 -->
+          <div class="content-area">
+            <!-- Clinics -->
+            <div v-if="currentView==='clinic'">
+              <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                  <span><i class="bi bi-hospital"></i> 診所列表</span>
+                  <button class="btn btn-light btn-sm" @click="openClinicModal()">
+                    <i class="bi bi-plus-circle"></i> 新增診所
+                  </button>
+                </div>
+                <div class="card-body">
+                  <div class="row mb-3">
+                    <div class="col-md-4">
+                      <input type="text" class="form-control" v-model="ClinicSearch" placeholder="搜尋診所編號或診所名稱...">
+                    </div>
+                  </div>
+                  <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                      <thead class="table-light">
+                        <tr>
+                          <th>ID</th>
+                          <th>診所編號</th>
+                          <th>診所名稱</th>
+                          <th>電話</th>
+                          <th>地址</th>
+                          <th style="width:150px;">操作</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <!-- ✅ 改用 filteredClinics -->
+                        <tr v-for="c in filteredClinics" :key="c.id">
+                          <td>{{ c.id }}</td>
+                          <td>{{ c.clinicNo }}</td>
+                          <td>{{ c.clinicName }}</td>
+                          <td>{{ c.phone }}</td>
+                          <td>{{ c.address }}</td>
+                          <td>
+                            <button class="btn btn-sm btn-warning me-1" @click="openClinicModal(c)"><i
+                                class="bi bi-pencil"></i></button>
+                            <button class="btn btn-sm btn-danger" @click="deleteClinic(c.id)"><i
+                                class="bi bi-trash"></i></button>
+                          </td>
+                        </tr>
+                        <tr v-if="filteredClinics.length===0">
+                          <td colspan="6" class="text-center text-muted">暫無診所資料</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Dentists -->
+            <div v-if="currentView==='dentist'">
+              <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                  <span><i class="bi bi-person"></i> 醫師列表</span>
+                  <button class="btn btn-light btn-sm" @click="openDentistModal()">
+                    <i class="bi bi-plus-circle"></i> 新增醫師
+                  </button>
+                </div>
+                <div class="card-body">
+                  <div class="row mb-3">
+                    <div class="col-md-4">
+                      <input type="text" class="form-control" v-model="DentistSearch" placeholder="搜尋醫師編號或醫師名稱...">
+                    </div>
+                  </div>
+                  <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                      <thead class="table-light">
+                        <tr>
+                          <th>ID</th>
+                          <th>醫師編號</th>
+                          <th>醫師名稱</th>
+                          <th style="width:150px;">操作</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <!-- ✅ 改用 filteredDentists -->
+                        <tr v-for="d in filteredDentists" :key="d.id">
+                          <td>{{ d.id }}</td>
+                          <td>{{ d.dentistNo }}</td>
+                          <td>{{ d.dentistName }}</td>
+                          <td>
+                            <button class="btn btn-sm btn-warning me-1" @click="openDentistModal(d)"><i
+                                class="bi bi-pencil"></i></button>
+                            <button class="btn btn-sm btn-danger" @click="deleteDentist(d.id)"><i
+                                class="bi bi-trash"></i></button>
+                          </td>
+                        </tr>
+                        <tr v-if="filteredDentists.length===0">
+                          <td colspan="4" class="text-center text-muted">暫無醫師資料</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ClinicDentists -->
+            <div v-if="currentView==='clinicDentist'">
+              <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                  <span><i class="bi bi-link-45deg"></i> 客戶總表</span>
+                  <button class="btn btn-light btn-sm" @click="openClinicDentistModal()">
+                    <i class="bi bi-plus-circle"></i> 新增明細
+                  </button>
+                </div>
+                <div class="card-body">
+                  <div class="row mb-3">
+                    <div class="col-md-4">
+                      <input type="text" class="form-control" v-model="ClinicDentistSearch" placeholder="搜尋診所或醫師...">
+                    </div>
+                  </div>
+                  <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                      <thead class="table-light">
+                        <tr>
+                          <th>ID</th>
+                          <th>診所</th>
+                          <th>醫師</th>
+                          <th style="width:150px;">操作</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <!-- ✅ 改用 filteredClinicDentists -->
+                        <tr v-for="cd in filteredClinicDentists" :key="cd.id">
+                          <td>{{ cd.id }}</td>
+                          <td>{{ cd.clinic?.clinicName }}</td>
+                          <td>{{ cd.dentist?.dentistName }}</td>
+                          <td>
+                            <button class="btn btn-sm btn-warning me-1" @click="openClinicDentistModal(cd)"><i
+                                class="bi bi-pencil"></i></button>
+                            <button class="btn btn-sm btn-danger" @click="deleteClinicDentist(cd.id)"><i
+                                class="bi bi-trash"></i></button>
+                          </td>
+                        </tr>
+                        <tr v-if="filteredClinicDentists.length===0">
+                          <td colspan="4" class="text-center text-muted">暫無資料</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+            </div><!-- /content-area -->
+        </main>
+      </div><!-- /row -->
+    </div><!-- /container-fluid -->
+
+    <!-- === 權限 Guard Overlay === -->
+    <div v-if="showGuard" class="guard-overlay" role="dialog" aria-modal="true" aria-labelledby="guardTitle"
+      aria-describedby="guardDesc">
+      <div class="guard-panel">
+        <div class="guard-head">
+          <div class="guard-icon"><i class="bi bi-shield-lock-fill" aria-hidden="true"></i></div>
+          <div class="guard-chip"><i class="bi bi-exclamation-diamond-fill"></i> 權限警示</div>
+        </div>
+        <h5 id="guardTitle" class="guard-title">{{ guardTitle }}</h5>
+        <p id="guardDesc" class="guard-desc mb-0">
+          目前以 <strong>{{ currentUser.role }}</strong> 身份登入，無法執行
+          <strong>{{ guardActionName }}</strong>。此操作需要
+          <span class="code">{{ guardRequiredRoles.join(' / ') }}</span> 權限。
+        </p>
+        <div class="guard-actions">
+          <button class="btn btn-guard-primary" @click="closeGuard">我知道了</button>
+          <button class="btn btn-outline-secondary btn-guard-outline" @click="logout">
+            <i class="bi bi-box-arrow-right me-1"></i> 登出並重新登入
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 三個 Modal（確保存在，避免 backdrop 錯誤） ===== -->
+    <teleport to="body">
+      <!-- Clinics Modal -->
+      <div class="modal fade" id="clinicModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+              <h5 class="modal-title">{{ clinicForm.id ? '編輯診所' : '新增診所' }}</h5>
+              <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <div class="mb-3"><label class="form-label">診所名稱</label><input class="form-control"
+                  v-model="clinicForm.clinicName"></div>
+              <div class="mb-3"><label class="form-label">電話</label><input class="form-control"
+                  v-model="clinicForm.phone"></div>
+              <div class="mb-3"><label class="form-label">地址</label><input class="form-control"
+                  v-model="clinicForm.address"></div>
+            </div>
+            <div class="modal-footer">
+              <button class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+              <button class="btn btn-primary" @click="saveClinic">儲存</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dentists Modal -->
+      <div class="modal fade" id="dentistModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+              <h5 class="modal-title">{{ dentistForm.id ? '編輯醫師' : '新增醫師' }}</h5>
+              <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <div class="mb-3"><label class="form-label">醫師名稱</label><input class="form-control"
+                  v-model="dentistForm.dentistName"></div>
+            </div>
+            <div class="modal-footer">
+              <button class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+              <button class="btn btn-primary" @click="saveDentist">儲存</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ClinicDentists Modal -->
+      <div class="modal fade" id="clinicDentistModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+              <h5 class="modal-title">{{ clinicDentistForm.id ? '編輯明細' : '新增明細' }}</h5>
+              <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <div class="mb-3">
+                <label class="form-label">診所 <span class="text-danger">*</span></label>
+                <select class="form-select" v-model="clinicDentistForm.clinic">
+                  <option :value="null">請選擇</option>
+                  <option v-for="c in clinics" :key="c.id" :value="c">{{ c.clinicNo }} - {{ c.clinicName }}</option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">醫師 <span class="text-danger">*</span></label>
+                <select class="form-select" v-model="clinicDentistForm.dentist">
+                  <option :value="null">請選擇</option>
+                  <option v-for="d in dentists" :key="d.id" :value="d">{{ d.dentistNo }} - {{ d.dentistName }}</option>
+                </select>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+              <button class="btn btn-primary" @click="saveClinicDentist">儲存</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </teleport>
+  </div><!-- /#app -->
+
+  <!-- JS（與 home.html 對齊） -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+  <!-- Sidebar 模組插入＋登出（與 home.html 一致） -->
+  <script type="module">
+    import { sidebarTemplate } from './js/sidebar.js';
+    const sidebarContainer = document.querySelector('#sidebar-container');
+    sidebarContainer.innerHTML = sidebarTemplate;
+
+    const logoutBtn = sidebarContainer.querySelector('#logoutBtn');
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (confirm('確定要登出嗎？')) {
+          try {
+            localStorage.removeItem('user');
+            localStorage.removeItem('loginUser');
+            localStorage.removeItem('loginRole');
+            localStorage.removeItem('loginEmpNo');
+            sessionStorage.clear?.();
+          } catch (_) { }
+          window.location.href = 'login.html';
+        }
+      });
+    }
+  </script>
+
+  <!-- Vue App：保留原 API 與權限判斷（含防呆 Modal） -->
+  <script>
+    const { createApp } = Vue;
+
+    createApp({
+      data() {
+        return {
+          currentView: 'clinic',
+          currentTime: '',
+          loginUser: '訪客',
+
+          // 清單
+          clinics: [], dentists: [], clinicDentists: [],
+          // 表單
+          clinicForm: {}, dentistForm: {}, clinicDentistForm: { clinic: null, dentist: null },
+
+          // ✅ 搜尋欄位
+          ClinicSearch: '',
+          DentistSearch: '',
+          ClinicDentistSearch: '',
+
+          // Auth / Guard
+          currentUser: { username: '訪客', role: 'guest' },
+          showGuard: false,
+          guardTitle: '您的權限不足',
+          guardActionName: '',
+          guardRequiredRoles: ['admin'],
+        }
+      },
+      computed: {
+        // ✅ 與檔案一一致，並做好空值防呆
+        filteredClinics() {
+          if (!this.ClinicSearch) return this.clinics;
+          const q = String(this.ClinicSearch).toLowerCase();
+          return this.clinics.filter(m =>
+            (m?.clinicNo && String(m.clinicNo).toLowerCase().includes(q)) ||
+            (m?.clinicName && String(m.clinicName).toLowerCase().includes(q))
+          );
+        },
+        filteredDentists() {
+          if (!this.DentistSearch) return this.dentists;
+          const q = String(this.DentistSearch).toLowerCase();
+          return this.dentists.filter(m =>
+            (m?.dentistNo && String(m.dentistNo).toLowerCase().includes(q)) ||
+            (m?.dentistName && String(m.dentistName).toLowerCase().includes(q))
+          );
+        },
+        filteredClinicDentists() {
+          if (!this.ClinicDentistSearch) return this.clinicDentists;
+          const q = String(this.ClinicDentistSearch).toLowerCase();
+          return this.clinicDentists.filter(m =>
+            (m?.clinic?.clinicName && String(m.clinic.clinicName).toLowerCase().includes(q)) ||
+            (m?.dentist?.dentistName && String(m.dentist.dentistName).toLowerCase().includes(q))
+          );
+        }
+      },
+      methods: {
+        updateTime() {
+          const d = new Date();
+          this.currentTime = `${d.getFullYear()}-${this.p2(d.getMonth() + 1)}-${this.p2(d.getDate())} ${this.p2(d.getHours())}:${this.p2(d.getMinutes())}`;
+        },
+
+        // 格式化數字為兩位數
+        p2(n) {
+          return n < 10 ? `0${n}` : `${n}`;
+        },
+
+        getViewTitle() {
+          if (this.currentView === 'clinic') return '診所';
+          if (this.currentView === 'dentist') return '醫師';
+          if (this.currentView === 'clinicDentist') return '客戶';
+          return '儀表板';
+        },
+
+        // 顯示「username｜role」
+        syncCurrentUserFromStorage() {
+          try {
+            const uObj = JSON.parse(localStorage.getItem('user') || '{}');
+            const fallbackUsername = localStorage.getItem('loginUser') || localStorage.getItem('loginEmpNo');
+            const fallbackRole = localStorage.getItem('loginRole');
+            const username = (uObj.username || uObj.name || fallbackUsername || '訪客').toString();
+            const role = (uObj.role || fallbackRole || 'guest').toString().toLowerCase();
+            this.currentUser = { username, role };
+            this.loginUser = `${username}${role ? '｜' + role : ''}`;
+          } catch (e) {
+            this.currentUser = { username: '訪客', role: 'guest' };
+            this.loginUser = '訪客';
+          }
+        },
+
+        // 權限控管：只允許 admin
+        requireRoles(roles, actionName, onAllowed) {
+          this.syncCurrentUserFromStorage();
+          const role = String(this.currentUser?.role || '').toLowerCase();
+          const ok = roles.map(r => String(r).toLowerCase()).includes(role);
+          if (ok) { onAllowed && onAllowed(); }
+          else {
+            this.guardActionName = actionName || '此操作';
+            this.guardRequiredRoles = roles;
+            this.showGuard = true;
+          }
+        },
+        requireAdmin(actionName, onAllowed) { this.requireRoles(['admin'], actionName, onAllowed); },
+        closeGuard() { this.showGuard = false; },
+
+        // Bootstrap Modal 防呆
+        _showModal(id) {
+          const el = document.getElementById(id);
+          if (!el) { alert(`找不到視窗：#${id}`); return; }
+          const inst = bootstrap.Modal.getOrCreateInstance(el, { backdrop: 'static', keyboard: false });
+          inst.show();
+        },
+
+        // APIs（沿用你的路徑）
+        fetchClinics() { fetch('http://localhost:8080/api/clinics').then(r => r.json()).then(d => this.clinics = d).catch(() => this.clinics = []); },
+        fetchDentists() { fetch('http://localhost:8080/api/dentists').then(r => r.json()).then(d => this.dentists = d).catch(() => this.dentists = []); },
+        fetchClinicDentists() { fetch('http://localhost:8080/api/clinic-dentists').then(r => r.json()).then(d => this.clinicDentists = d).catch(() => this.clinicDentists = []); },
+
+        // Modals + CRUD（帶權限）
+        openClinicModal(c = null) {
+          const show = () => { this.clinicForm = c ? { ...c } : {}; this._showModal('clinicModal'); };
+          c ? this.requireAdmin('編輯診所', show) : this.requireAdmin('新增診所', show);
+        },
+        openDentistModal(d = null) {
+          const show = () => { this.dentistForm = d ? { ...d } : {}; this._showModal('dentistModal'); };
+          d ? this.requireAdmin('編輯醫師', show) : this.requireAdmin('新增醫師', show);
+        },
+        openClinicDentistModal(cd = null) {
+          const show = () => {
+            this.clinicDentistForm = cd ? { ...cd } : { clinic: null, dentist: null };
+            this._showModal('clinicDentistModal');
+          };
+          cd ? this.requireAdmin('編輯診所醫師關聯', show) : this.requireAdmin('新增診所醫師關聯', show);
+        },
+
+        saveClinic() {
+          const url = this.clinicForm.id
+            ? `http://localhost:8080/api/clinics/${this.clinicForm.id}`
+            : 'http://localhost:8080/api/clinics';
+          fetch(url, {
+            method: this.clinicForm.id ? 'PUT' : 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(this.clinicForm)
+          }).then(r => {
+            if (!r.ok) throw new Error('儲存失敗');
+            return r.text();
+          }).then(() => {
+            this.fetchClinics();
+            bootstrap.Modal.getInstance(document.getElementById('clinicModal'))?.hide();
+          }).catch(err => alert(err.message || '發生錯誤'));
+        },
+
+        saveDentist() {
+          const url = this.dentistForm.id
+            ? `http://localhost:8080/api/dentists/${this.dentistForm.id}`
+            : 'http://localhost:8080/api/dentists';
+          fetch(url, {
+            method: this.dentistForm.id ? 'PUT' : 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(this.dentistForm)
+          }).then(r => {
+            if (!r.ok) throw new Error('儲存失敗');
+            return r.text();
+          }).then(() => {
+            this.fetchDentists();
+            bootstrap.Modal.getInstance(document.getElementById('dentistModal'))?.hide();
+          }).catch(err => alert(err.message || '發生錯誤'));
+        },
+
+        saveClinicDentist() {
+          if (!this.clinicDentistForm.clinic || !this.clinicDentistForm.dentist) {
+            alert('請選擇診所與醫師'); return;
+          }
+          const selectedClinicId = this.clinicDentistForm.clinic?.id;
+          const selectedDentistId = this.clinicDentistForm.dentist?.id;
+          const duplicate = this.clinicDentists.some(cd =>
+            cd.clinic?.id === selectedClinicId &&
+            cd.dentist?.id === selectedDentistId &&
+            cd.id !== this.clinicDentistForm.id
+          );
+          if (duplicate) { alert('此診所與醫師的關聯已存在，請勿重複新增！'); return; }
+
+          const url = this.clinicDentistForm.id
+            ? `http://localhost:8080/api/clinic-dentists/${this.clinicDentistForm.id}`
+            : 'http://localhost:8080/api/clinic-dentists';
+
+          fetch(url, {
+            method: this.clinicDentistForm.id ? 'PUT' : 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(this.clinicDentistForm)
+          })
+            .then(res => {
+              if (!res.ok) throw new Error("儲存失敗！");
+              return res.text();
+            })
+            .then(() => {
+              this.fetchClinicDentists();
+              bootstrap.Modal.getInstance(document.getElementById('clinicDentistModal'))?.hide();
+              alert('儲存成功！');
+            })
+            .catch(err => {
+              alert(err.message || '儲存發生錯誤');
+            });
+        },
+
+        deleteClinic(id) {
+          this.requireAdmin('刪除診所', () => {
+            if (confirm('確定刪除嗎？')) {
+              fetch(`http://localhost:8080/api/clinics/${id}`, { method: 'DELETE' })
+                .then(() => this.fetchClinics())
+                .catch(() => alert('刪除失敗'));
+            }
+          });
+        },
+        deleteDentist(id) {
+          this.requireAdmin('刪除醫師', () => {
+            if (confirm('確定刪除嗎？')) {
+              fetch(`http://localhost:8080/api/dentists/${id}`, { method: 'DELETE' })
+                .then(() => this.fetchDentists())
+                .catch(() => alert('刪除失敗'));
+            }
+          });
+        },
+
+        logout() {
+          // 先關掉遮罩（不是必要，但避免畫面殘留）
+          this.showGuard = false;
+          try {
+            localStorage.removeItem('user');
+            localStorage.removeItem('loginUser');
+            localStorage.removeItem('loginRole');
+            localStorage.removeItem('loginEmpNo');
+            sessionStorage.clear?.();
+          } catch (e) { /* ignore */ }
+          // 導回登入頁
+          window.location.href = 'login.html';
+        },
+
+        deleteClinicDentist(id) {
+          this.requireAdmin('刪除診所醫師關聯', () => {
+            if (confirm('確定刪除嗎？')) {
+              fetch(`http://localhost:8080/api/clinic-dentists/${id}`, { method: 'DELETE' })
+                .then(() => this.fetchClinicDentists())
+                .catch(() => alert('刪除失敗'));
+            }
+          });
+        },
+      },
+
+      mounted() {
+        this.updateTime();  // 初始化時也更新一次
+        this.timeInterval = setInterval(this.updateTime, 1000); // 每秒更新一次時間
+        this.syncCurrentUserFromStorage();
+
+        // URL 切換 tab：?view=clinic|dentist|clinicDentist
+        const params = new URLSearchParams(window.location.search);
+        const viewFromUrl = params.get('view');
+        if (viewFromUrl) this.currentView = viewFromUrl;
+
+        this.fetchClinics();
+        this.fetchDentists();
+        this.fetchClinicDentists();
+      }
+    }).mount('#app');
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,802 @@
+<!doctype html>
+<html lang="zh-Hant">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Balanced Dental Lab｜新增訂單／病例</title>
+
+  <!-- Bootstrap（與其他頁一致） -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+  <!-- 全站主題 -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+  <div id="app" class="container-fluid">
+    <div class="row g-0">
+      <!-- 左側選單 -->
+      <div id="sidebar-container" class="col-md-2 sidebar"></div>
+
+      <!-- 右側內容 -->
+      <main class="col-12 col-md-10 p-3 p-lg-4">
+        <!-- Header -->
+        <div class="header d-flex justify-content-between align-items-center">
+          <h5 class="mb-0 d-flex align-items-center gap-2">
+            <i :class="isEdit ? 'bi bi-pencil-square' : 'bi bi-journal-plus'"></i>
+            {{ getViewTitle() }}
+          </h5>
+          <div class="d-flex align-items-center gap-3">
+            <span class="text-muted"><i class="bi bi-clock"></i> {{ currentTime }}</span>
+            <span class="badge text-bg-primary"><i class="bi bi-person-circle"></i> {{ loginUser }}｜{{ loginRole
+              }}</span>
+          </div>
+        </div>
+
+        <div class="content-area">
+          <!-- 主表單卡片 -->
+          <div v-if="currentView==='order'">
+            <div class="card">
+              <div class="card-header d-flex align-items-center">
+                <i :class="isEdit ? 'bi bi-pencil-square me-2' : 'bi bi-journal-plus me-2'"></i>
+                {{ isEdit ? `編輯訂單／病例（${editCaseNo}）` : '新增訂單／病例' }}
+              </div>
+
+              <div class="card-body form-card-body">
+                <!-- 基本資訊 -->
+                <div class="mb-4">
+                  <div class="form-section-title mb-3">基本資訊</div>
+                  <div class="row g-3">
+                    <!-- 診所 -->
+                    <div class="col-md-6">
+                      <label class="form-label required">診所</label>
+                      <select class="form-select" v-model="form.clinicId" @change="onClinicChange"
+                        :disabled="loading.editPrefill" :class="{'is-invalid': touched.clinicId && !form.clinicId}">
+                        <option value="" disabled>— 請選擇診所 —</option>
+                        <option v-for="c in clinics" :key="c.id" :value="c.id">{{ c.name }}</option>
+                      </select>
+                      <div class="invalid-feedback">請選擇診所</div>
+                    </div>
+
+                    <!-- 醫師（連動） -->
+                    <div class="col-md-6">
+                      <label class="form-label required">醫師</label>
+                      <select class="form-select" v-model="form.dentistId"
+                        :disabled="!form.clinicId || dentistsLoading || loading.editPrefill"
+                        :class="{'is-invalid': touched.dentistId && !form.dentistId}">
+                        <option value="" disabled>
+                          {{ dentistsLoading ? '載入中…' : (form.clinicId ? '— 請選擇醫師 —' : '請先選診所') }}
+                        </option>
+                        <option v-for="d in dentists" :key="d.id" :value="d.id">{{ d.name }}</option>
+                      </select>
+                      <div class="invalid-feedback">請選擇醫師</div>
+                    </div>
+
+                    <!-- 患者姓名 -->
+                    <div class="col-md-6">
+                      <label class="form-label required">患者姓名</label>
+                      <input type="text" class="form-control" v-model.trim="form.patientName" placeholder="請輸入患者姓名"
+                        :disabled="loading.editPrefill"
+                        :class="{'is-invalid': touched.patientName && !form.patientName}" />
+                      <div class="invalid-feedback">請填寫患者姓名</div>
+                    </div>
+
+                    <!-- 寄回日期 -->
+                    <div class="col-md-6">
+                      <label class="form-label required">寄回日（return_at）</label>
+                      <input type="date" class="form-control" v-model="form.returnAt" :min="tomorrow"
+                        :disabled="loading.editPrefill" :class="{'is-invalid': touched.returnAt && !form.returnAt}" />
+                      <div class="invalid-feedback">請選擇寄回日期</div>
+                    </div>
+                  </div>
+                </div>
+
+                <hr />
+
+                <!-- 產品資訊（多筆） -->
+                <div class="mb-4">
+                  <div class="d-flex align-items-center justify-content-between mb-3">
+                    <div class="form-section-title">產品資訊</div>
+                    <button type="button" class="btn btn-outline-primary btn-sm" @click="addProductSection"
+                      title="新增一筆">
+                      <i class="bi bi-plus-lg me-1"></i> 新增一筆
+                    </button>
+                  </div>
+
+                  <div class="vstack gap-4">
+                    <div class="border rounded p-3 bg-light" v-for="(p, idx) in form.products" :key="idx">
+                      <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div class="fw-semibold">品項 #{{ idx + 1 }}</div>
+                        <button type="button" class="btn btn-outline-danger btn-sm" v-if="form.products.length > 1"
+                          @click="removeProductSection(idx)">
+                          <i class="bi bi-trash me-1"></i> 移除這筆
+                        </button>
+                      </div>
+
+                      <div class="row g-3">
+                        <!-- 類別 -->
+                        <div class="col-md-6">
+                          <label class="form-label required">產品類別</label>
+                          <select class="form-select" v-model="p.categoryId" @change="onCategoryChange(idx)"
+                            :class="{'is-invalid': isTouchedAndEmpty(idx,'categoryId')}">
+                            <option value="" disabled>— 請選擇類別 —</option>
+                            <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+                          </select>
+                          <div class="invalid-feedback">請選擇產品類別</div>
+                        </div>
+
+                        <!-- 品項（連動） -->
+                        <div class="col-md-6">
+                          <label class="form-label required">產品品項</label>
+                          <select class="form-select" v-model="p.itemId" :disabled="!p.categoryId || itemsLoading[idx]"
+                            :class="{'is-invalid': isTouchedAndEmpty(idx,'itemId')}">
+                            <option value="" disabled>
+                              {{ itemsLoading[idx] ? '載入中…' : (p.categoryId ? '— 請選擇品項 —' : '請先選類別') }}
+                            </option>
+                            <option v-for="it in (itemsMap[idx] || [])" :key="it.id" :value="it.id">{{ it.name }}
+                            </option>
+                          </select>
+                          <div class="invalid-feedback">請選擇產品品項</div>
+                        </div>
+
+                        <!-- 齒位 -->
+                        <div class="col-md-6">
+                          <label class="form-label required">齒位</label>
+                          <select class="form-select" v-model="p.toothPosition"
+                            :class="{'is-invalid': isTouchedAndEmpty(idx,'toothPosition')}">
+                            <option value="" disabled>— 請選擇齒位 —</option>
+                            <option v-for="tp in toothPositions" :key="tp.value" :value="tp.value">{{ tp.label }}
+                            </option>
+                          </select>
+                          <div class="invalid-feedback">請選擇齒位</div>
+                        </div>
+
+                        <!-- 數量 -->
+                        <div class="col-md-6">
+                          <label class="form-label">數量</label>
+                          <input type="number" class="form-control" v-model.number="p.quantity" min="1" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 底部按鈕列 -->
+                <div class="d-flex justify-content-end gap-2 mt-3">
+                  <button class="btn btn-primary" @click="handleSubmit" :disabled="loading.submit">
+                    <i :class="isEdit ? 'bi bi-save me-1' : 'bi bi-check2-circle me-1'"></i>
+                    {{ isEdit ? '儲存變更' : '送出' }}
+                  </button>
+                  <button class="btn btn-outline-secondary" @click="resetForm" :disabled="loading.submit && !isEdit">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i> 重設
+                  </button>
+                </div>
+
+                <!-- 預覽摘要（加回來） -->
+                <div class="card shadow-sm mt-3">
+                  <div class="card-body">
+                    <div class="form-section-title mb-2">預覽摘要</div>
+                    <ul class="mb-0">
+                      <li>診所：<strong>{{ selectedClinicName || '—' }}</strong></li>
+                      <li>醫師：<strong>{{ selectedDentistName || '—' }}</strong></li>
+                      <li>患者：<strong>{{ form.patientName || '—' }}</strong></li>
+                      <li>寄回日：<strong>{{ form.returnAt || '—' }}</strong></li>
+                      <li class="mt-2">品項明細：</li>
+                      <li>
+                        <ol class="mt-1">
+                          <li v-for="(p, idx) in form.products" :key="'s-'+idx">
+                            類別／品項：<strong>{{ (categories.find(c=>String(c.id)===String(p.categoryId))?.name) || '—' }} /
+                              {{ ((itemsMap[idx]||[]).find(i=>String(i.id)===String(p.itemId))?.name) || '—' }}</strong>
+                            ，齒位：<strong>{{ p.toothPosition || '—' }}</strong>
+                            ，數量：<strong>{{ p.quantity }}</strong>
+                          </li>
+                        </ol>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+
+                <!-- Toast -->
+                <div class="position-fixed bottom-0 end-0 p-3">
+                  <div id="toastSuccess" ref="toastSuccess" class="toast align-items-center border-0" role="alert"
+                    aria-live="assertive" aria-atomic="true" data-bs-autohide="true">
+                    <div class="d-flex">
+                      <div class="toast-body">{{ isEdit ? '更新成功' : '新增成功' }}</div>
+                      <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+          <!-- 其它示意頁籤（保留） -->
+          <div v-if="currentView==='clinic'" class="mt-3">
+            <div class="card">
+              <div class="card-header">診所列表（示意）</div>
+              <div class="card-body">
+                <p class="mb-0 text-muted">此處保留管理 UI（示意），主要工作區為「新增／編輯訂單／病例」。</p>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="currentView==='dentist'" class="mt-3">
+            <div class="card">
+              <div class="card-header">醫師列表（示意）</div>
+              <div class="card-body">
+                <p class="mb-0 text-muted">此處保留管理 UI（示意），主要工作區為「新增／編輯訂單／病例」。</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Sidebar 模組 -->
+  <script type="module">
+    import { sidebarTemplate } from './js/sidebar.js';
+    const sidebarContainer = document.querySelector('#sidebar-container');
+    sidebarContainer.innerHTML = sidebarTemplate;
+
+    const logoutBtn = sidebarContainer.querySelector('#logoutBtn');
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (confirm('確定要登出嗎？')) {
+          try {
+            localStorage.removeItem('loginUser');
+            localStorage.removeItem('loginRole');
+            localStorage.removeItem('loginEmpNo');
+            localStorage.removeItem('user');
+            sessionStorage.clear?.();
+          } catch (_) { }
+          window.location.href = 'login.html';
+        }
+      });
+    }
+  </script>
+
+  <!-- Vue / Axios / Bootstrap JS -->
+  <script src="https://unpkg.com/vue@3.5.12/dist/vue.global.prod.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios@1.7.7/dist/axios.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- 本頁內的 Vue App -->
+  <script>
+    const { createApp, computed, onMounted, reactive, ref } = Vue;
+    createApp({
+      setup() {
+        // === 基本設定 ===
+        const BASE_URL = (typeof window !== 'undefined' && window.API_BASE_URL)
+          ? String(window.API_BASE_URL) : "http://localhost:8080";
+
+        const API = {
+          clinics: "/api/clinics/options",
+          dentistsByClinic: (clinicId) => `/api/clinics/${encodeURIComponent(clinicId)}/dentists`,
+          categories: "/api/categories",
+          itemsByCategory: (catId) => `/api/categories/${encodeURIComponent(catId)}/items`,
+
+          // Case
+          caseByNo: (caseNo) => `/api/cases/${encodeURIComponent(caseNo)}`,
+          createCase: "/api/cases",
+
+          // Order / Details
+          caseOrders: (caseNo) => `/api/orders?caseNo=${encodeURIComponent(caseNo)}`,
+          orderByNo: (orderNo) => `/api/orders/${encodeURIComponent(orderNo)}`,
+          createOrder: "/api/orders",
+          orderDetails: (orderNo) => `/api/orders/${encodeURIComponent(orderNo)}/details`,
+          addOrderDetail: (orderNo) => `/api/orders/${encodeURIComponent(orderNo)}/details`,
+          putOrderDetail: (orderNo, detailId) => `/api/orders/${encodeURIComponent(orderNo)}/details/${encodeURIComponent(detailId)}`,
+          deleteOrder: (orderNo) => `/api/orders/${encodeURIComponent(orderNo)}`,
+          deleteOrderDetail: (orderNo, detailId) => `/api/orders/${encodeURIComponent(orderNo)}/details/${encodeURIComponent(detailId)}`
+        };
+
+        const loginUser = ref(localStorage.getItem('loginUser') || '訪客');
+        const loginRole = ref(localStorage.getItem('loginRole') || 'staff');
+        const CURRENT_EMP_NO = localStorage.getItem('loginEmpNo') || null;
+
+        // === 版型：時間/頁籤/標題 ===
+        const currentView = ref('order');
+        const currentTime = ref('');  // 使用 ref() 來使 currentTime 成為響應式
+
+        const timeInterval = setInterval(() => {
+          const now = new Date();
+          const formattedTime = new Intl.DateTimeFormat('zh-TW', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false  // 24小時制
+          }).format(now);
+
+          // 轉換為 "2025-10-16 11:04" 格式
+          currentTime.value = formattedTime.replace(/\//g, '-').slice(0, 16);
+        }, 1000);
+
+
+
+
+
+        const params = new URLSearchParams(location.search);
+        const editCaseNo = params.get('caseNo') || null;
+        const isEdit = ref(!!editCaseNo);
+
+        function getViewTitle() {
+          if (currentView.value === 'order') return isEdit.value ? '編輯訂單／病例' : '新增訂單／病例';
+          if (currentView.value === 'clinic') return '診所管理（示意）';
+          if (currentView.value === 'dentist') return '醫師管理（示意）';
+          return '';
+        }
+
+        // === 狀態 ===
+        const loading = reactive({ editPrefill: false, submit: false });
+        const form = reactive({
+          clinicId: "",
+          dentistId: "",
+          patientName: "",
+          products: [{ categoryId: "", itemId: "", toothPosition: "", quantity: 1 }],
+          returnAt: ""
+        });
+        const touched = reactive({
+          clinicId: false, dentistId: false, patientName: false, returnAt: false,
+          products: [{ categoryId: false, itemId: false, toothPosition: false }]
+        });
+
+        // 下拉資料
+        const clinics = ref([]), dentists = ref([]), categories = ref([]), itemsMap = ref([[]]);
+        const dentistsLoading = ref(false), itemsLoading = ref([false]);
+        const today = new Date().toISOString().slice(0, 10);
+
+        // 新增：tomorrow（本地時間 +1 天 → yyyy-MM-dd）
+        const tomorrow = (() => {
+          const d = new Date();
+          d.setDate(d.getDate() + 1);
+          return d.toISOString().slice(0, 10);
+        })();
+
+        // 齒位清單（示例）
+        const toothPositions = ref([
+          { value: "11", label: "11" }, { value: "12", label: "12" },
+          { value: "13", label: "13" }, { value: "14", label: "14" },
+          { value: "15", label: "15" }, { value: "16", label: "16" },
+          { value: "17", label: "17" }, { value: "18", label: "18" },
+          { value: "21", label: "21" }, { value: "22", label: "22" },
+          { value: "23", label: "23" }, { value: "24", label: "24" }
+        ]);
+
+        const selectedClinicName = computed(() => clinics.value.find(c => String(c.id) === String(form.clinicId))?.name);
+        const selectedDentistName = computed(() => dentists.value.find(d => String(d.id) === String(form.dentistId))?.name);
+
+        // === API helpers ===
+        const apiGet = (url) => axios.get(BASE_URL + url);
+        const apiPost = (url, body) => axios.post(BASE_URL + url, body);
+        const apiPut = (url, body) => axios.put(BASE_URL + url, body);
+        const apiDelete = (url) => axios.delete(BASE_URL + url);
+
+        // === 下拉載入 ===
+        const fetchClinics = async () => { try { const { data } = await apiGet(API.clinics); clinics.value = data || []; } catch { clinics.value = []; } };
+        const fetchCategories = async () => { try { const { data } = await apiGet(API.categories); categories.value = data || []; } catch { categories.value = []; } };
+        const fetchDentists = async (clinicId) => {
+          if (!clinicId) { dentists.value = []; return; }
+          dentistsLoading.value = true;
+          try { const { data } = await apiGet(API.dentistsByClinic(clinicId)); dentists.value = data || []; }
+          finally { dentistsLoading.value = false; }
+        };
+        const fetchItems = async (idx, catId) => {
+          itemsLoading.value[idx] = true;
+          try {
+            const { data } = await apiGet(API.itemsByCategory(catId));
+            const normalized = Array.isArray(data) ? data.map(o => ({ id: o.id, name: o.name, productNo: o.productNo })) : [];
+            itemsMap.value[idx] = normalized;
+          } catch { itemsMap.value[idx] = []; }
+          finally { itemsLoading.value[idx] = false; }
+        };
+
+        // 反查工具：itemId → productNo
+        const itemIdToProductNo = (idx, itemId) => {
+          const list = itemsMap.value[idx] || [];
+          const it = list.find(i => String(i.id) === String(itemId));
+          return it?.productNo || null;
+        };
+
+        // === 事件 ===
+        const onClinicChange = async () => {
+          form.dentistId = ""; dentists.value = [];
+          if (form.clinicId) await fetchDentists(form.clinicId);
+        };
+        const onCategoryChange = async (idx) => {
+          const p = form.products[idx];
+          p.itemId = ""; itemsMap.value[idx] = [];
+          if (p.categoryId) await fetchItems(idx, p.categoryId);
+        };
+
+        // === 驗證 ===
+        const isTouchedAndEmpty = (idx, key) => {
+          const t = touched.products[idx];
+          return t && t[key] && !form.products[idx][key];
+        };
+        const validate = () => {
+          touched.clinicId = true; touched.dentistId = true; touched.patientName = true; touched.returnAt = true;
+          const topOk = form.clinicId && form.dentistId && form.patientName && form.returnAt;
+          if (!isEdit.value) {
+            touched.products = form.products.map(() => ({ categoryId: true, itemId: true, toothPosition: true }));
+            const productsOk = form.products.length > 0 &&
+              form.products.every(p => p.categoryId && p.itemId && p.toothPosition && (p.quantity || 1) > 0);
+            return topOk && productsOk;
+          }
+          return topOk; // 編輯模式先只驗基本欄位；明細交給差異同步
+        };
+
+        // === Toast ===
+        const toastSuccess = ref(null);
+        let toastInstance = null;
+        const showSuccessToast = () => {
+          if (!toastInstance && toastSuccess.value && window.bootstrap && bootstrap.Toast) {
+            toastInstance = bootstrap.Toast.getOrCreateInstance(toastSuccess.value, { delay: 1800 });
+          }
+          toastInstance?.show();
+        };
+
+        // === 載入編輯資料 ===
+        const ymd = (s) => s ? String(s).slice(0, 10) : '';
+        const resolveId = (...candidates) => { for (const v of candidates) if (v !== undefined && v !== null && String(v) !== '') return String(v); return ''; };
+
+        // 會在同步時用到的「目前後端狀態」快照
+        let serverOrders = []; // [{orderNo,toothCode,details:[{id,productNo,qty}]}]
+
+        const loadCaseAndPrefill = async () => {
+          if (!isEdit.value) return;
+          loading.editPrefill = true;
+          try {
+            // 1) 案件
+            const { data: c } = await apiGet(API.caseByNo(editCaseNo));
+            const clinicId = resolveId(c?.clinicId, c?.clinic?.id, c?.clinic_id);
+            const dentistId = resolveId(c?.dentistId, c?.dentist?.id, c?.dentist_id);
+            form.patientName = c?.patientName ?? c?.patient_name ?? '';
+            form.returnAt = ymd(c?.returnAt ?? c?.return_at);
+            form.clinicId = clinicId || '';
+            await fetchDentists(form.clinicId);
+            form.dentistId = dentistId || '';
+
+            // 2) 訂單＋明細（作為 server snapshot）
+            const { data: orders } = await apiGet(API.caseOrders(editCaseNo));
+            const orderList = Array.isArray(orders) ? orders : [];
+            serverOrders = [];
+            for (const o of orderList) {
+              const orderNo = o.orderNo || o.order_no;
+              const toothCode = String(o.toothCode || o.tooth_code || '').trim();
+              if (!orderNo) continue;
+              try {
+                const { data: details } = await apiGet(API.orderDetails(orderNo));
+                const dets = Array.isArray(details) ? details : [];
+                serverOrders.push({
+                  orderNo, toothCode,
+                  details: dets.map(d => ({
+                    id: d.id ?? d.detailId ?? d.detail_id,
+                    productNo: d.productNo ?? d.product_no,
+                    qty: d.qty ?? d.quantity ?? 1
+                  }))
+                });
+              } catch {
+                serverOrders.push({ orderNo, toothCode, details: [] });
+              }
+            }
+
+            // 3) 用 server snapshot 回填 form.products
+            const productLines = [];
+            for (const so of serverOrders) {
+              for (const d of so.details) {
+                // 反查 categoryId/itemId：對每個類別把清單撈一次找到 productNo
+                let mapped = { categoryId: "", itemId: "" };
+                for (const cat of categories.value) {
+                  try {
+                    const { data } = await apiGet(API.itemsByCategory(cat.id));
+                    const arr = Array.isArray(data) ? data : [];
+                    const hit = arr.find(it => String(it.productNo) === String(d.productNo));
+                    if (hit) { mapped = { categoryId: cat.id, itemId: hit.id }; break; }
+                  } catch { }
+                }
+                productLines.push({
+                  categoryId: mapped.categoryId,
+                  itemId: mapped.itemId,
+                  toothPosition: so.toothCode || "",
+                  quantity: d.qty ?? 1
+                });
+              }
+              // 沒明細的訂單也要保留一列以免使用者看不到齒位
+              if (so.details.length === 0) {
+                productLines.push({
+                  categoryId: "", itemId: "",
+                  toothPosition: so.toothCode || "", quantity: 1
+                });
+              }
+            }
+            form.products = productLines.length ? productLines : [{ categoryId: "", itemId: "", toothPosition: "", quantity: 1 }];
+
+            // 4) 為每列載入品項下拉
+            itemsMap.value = form.products.map(() => []);
+            itemsLoading.value = form.products.map(() => false);
+            for (let i = 0; i < form.products.length; i++) {
+              const catId = form.products[i].categoryId;
+              if (catId) await fetchItems(i, catId);
+            }
+          } finally {
+            loading.editPrefill = false;
+          }
+        };
+
+        // === 生成 orderNo（新增時用） ===
+        const genOrderNo = (idx) => {
+          const ts = new Date().toISOString().replace(/[-:.TZ]/g, '').slice(0, 14);
+          return `ORD-${ts}-${idx + 1}`;
+        };
+
+        // === 同步 Orders/Details（編輯模式） ===
+        const fetchServerSnapshot = async () => {
+          const { data: orders } = await apiGet(API.caseOrders(editCaseNo));
+          const orderList = Array.isArray(orders) ? orders : [];
+          const snap = [];
+          for (const o of orderList) {
+            const orderNo = o.orderNo || o.order_no;
+            const toothCode = String(o.toothCode || o.tooth_code || '').trim();
+            if (!orderNo) continue;
+            try {
+              const { data: details } = await apiGet(API.orderDetails(orderNo));
+              const dets = Array.isArray(details) ? details : [];
+              snap.push({
+                orderNo, toothCode,
+                details: dets.map(d => ({
+                  id: d.id ?? d.detailId ?? d.detail_id,
+                  productNo: d.productNo ?? d.product_no,
+                  qty: d.qty ?? d.quantity ?? 1
+                }))
+              });
+            } catch {
+              snap.push({ orderNo, toothCode, details: [] });
+            }
+          }
+          return snap;
+        };
+
+        const groupDesiredByTooth = () => {
+          // 以「齒位」當一張訂單，明細用 productNo/qty
+          const groups = new Map(); // toothCode -> [{productNo, qty}]
+          for (let i = 0; i < form.products.length; i++) {
+            const p = form.products[i];
+            const tooth = String(p.toothPosition || '').trim();
+            if (!tooth) continue; // 沒齒位的不納入訂單
+            const productNo = itemIdToProductNo(i, p.itemId);
+            if (!groups.has(tooth)) groups.set(tooth, []);
+            if (productNo) groups.get(tooth).push({ productNo, qty: Number(p.quantity) > 0 ? Number(p.quantity) : 1 });
+          }
+          return groups;
+        };
+
+        const ensureOrderForTooth = async (caseNo, toothCode, indexSeed = 0) => {
+          // 找現有訂單，沒有就建
+          let order = serverOrders.find(o => o.toothCode === toothCode);
+          if (order) return order.orderNo;
+
+          const orderNo = genOrderNo(indexSeed);
+          const resp = await apiPost(API.createOrder, { orderNo, caseEntity: { caseNo }, toothCode });
+          const usedOrderNo = resp?.data?.orderNo || orderNo;
+          // 同步到本地 serverOrders
+          serverOrders.push({ orderNo: usedOrderNo, toothCode, details: [] });
+          return usedOrderNo;
+        };
+
+        const syncDetailsForOrder = async (orderNo, desiredDetails) => {
+          // desiredDetails: [{productNo, qty}]
+          const serverOrder = serverOrders.find(o => o.orderNo === orderNo) || { details: [] };
+          const curMap = new Map(serverOrder.details.map(d => [String(d.productNo), d]));
+          const desMap = new Map(desiredDetails.map(d => [String(d.productNo), d]));
+
+          // 更新/新增
+          for (const [pno, d] of desMap.entries()) {
+            if (curMap.has(pno)) {
+              const curr = curMap.get(pno);
+              if (Number(curr.qty) !== Number(d.qty)) {
+                // 嘗試 PUT
+                const detailId = curr.id;
+                try {
+                  await apiPut(API.putOrderDetail(orderNo, detailId), { product: { productNo: pno }, qty: d.qty });
+                  curr.qty = d.qty; // 更新本地
+                } catch {
+                  // 後端無 PUT：刪除再新增
+                  try { await apiDelete(API.deleteOrderDetail(orderNo, detailId)); } catch { }
+                  await apiPost(API.addOrderDetail(orderNo), { product: { productNo: pno }, qty: d.qty });
+                  // 更新本地（無法得知新 id，就重抓）
+                }
+              }
+            } else {
+              // 新增
+              await apiPost(API.addOrderDetail(orderNo), { product: { productNo: pno }, qty: d.qty });
+            }
+          }
+
+          // 刪除多餘
+          for (const [pno, curr] of curMap.entries()) {
+            if (!desMap.has(pno)) {
+              try { await apiDelete(API.deleteOrderDetail(orderNo, curr.id)); } catch { }
+            }
+          }
+        };
+
+        const deleteOrderDeep = async (orderNo) => {
+          // 優先 DELETE 訂單；若不支援，刪空明細當退路
+          try {
+            await apiDelete(API.deleteOrder(orderNo));
+            return;
+          } catch { /* fallthrough */ }
+          // 刪除所有明細
+          try {
+            const { data: details } = await apiGet(API.orderDetails(orderNo));
+            const dets = Array.isArray(details) ? details : [];
+            for (const d of dets) {
+              const id = d.id ?? d.detailId ?? d.detail_id;
+              if (id) { try { await apiDelete(API.deleteOrderDetail(orderNo, id)); } catch { } }
+            }
+          } catch { }
+        };
+
+        const syncOrdersAndDetails = async () => {
+          // 重新抓 snapshot，避免前面已有變動
+          serverOrders = await fetchServerSnapshot();
+
+          // 期望狀態（以齒位分組）
+          const desiredGroups = groupDesiredByTooth(); // Map(tooth -> [{productNo, qty}])
+
+          const serverToothCodes = new Set(serverOrders.map(o => o.toothCode));
+          const desiredToothCodes = new Set(desiredGroups.keys());
+
+          // 刪除多餘訂單（後端有但前端沒）
+          for (const so of serverOrders) {
+            if (!desiredToothCodes.has(so.toothCode)) {
+              await deleteOrderDeep(so.orderNo);
+            }
+          }
+
+          // 建立缺少訂單 & 同步明細
+          let seed = 0;
+          for (const [tooth, details] of desiredGroups.entries()) {
+            const orderNo = await ensureOrderForTooth(editCaseNo, tooth, seed++);
+            await syncDetailsForOrder(orderNo, details);
+          }
+        };
+
+        // === 送出 ===
+        const handleSubmit = async () => {
+          if (!validate()) return;
+          loading.submit = true;
+          try {
+            if (isEdit.value) {
+              // 1) 更新 Case 基本欄位（避免 400，只送這兩個）
+              const q = new URLSearchParams({
+                patientName: (form.patientName || '').trim(),
+                returnAt: form.returnAt || ''
+              });
+              await apiPut(`${API.caseByNo(editCaseNo)}?${q.toString()}`, null);
+
+              // 2) 同步訂單與明細（新增/修改/刪除）
+              await syncOrdersAndDetails();
+
+              showSuccessToast();
+              return;
+            }
+
+            // ===== 新增模式：沿用你原本流程 =====
+            const clinicName = (clinics.value.find(c => String(c.id) === String(form.clinicId))?.name) || "";
+            const dentistName = (dentists.value.find(d => String(d.id) === String(form.dentistId))?.name) || "";
+            const casePayload = {
+              patientName: (form.patientName || "").trim(),
+              returnAt: form.returnAt,
+              clinic: { clinicName },
+              dentist: { dentistName },
+              createdBy: { empNo: CURRENT_EMP_NO }
+            };
+
+            const caseResp = await apiPost(API.createCase, casePayload);
+            const caseData = caseResp?.data || {};
+            const caseNo = caseData.caseNo || caseData.id || null;
+            if (!caseNo) throw new Error("後端未回傳 caseNo，無法建立訂單");
+
+            // 以齒位分組建立訂單
+            const groups = new Map();
+            for (let i = 0; i < form.products.length; i++) {
+              const p = form.products[i];
+              const tooth = String(p.toothPosition || '').trim();
+              if (!tooth) continue;
+              if (!groups.has(tooth)) groups.set(tooth, []);
+              const productNo = itemIdToProductNo(i, p.itemId);
+              if (productNo) groups.get(tooth).push({ productNo, qty: Number(p.quantity) > 0 ? Number(p.quantity) : 1 });
+            }
+
+            let idxSeed = 0;
+            for (const [tooth, details] of groups.entries()) {
+              const orderNo = genOrderNo(idxSeed++);
+              const orderResp = await apiPost(API.createOrder, { orderNo, caseEntity: { caseNo }, toothCode: tooth });
+              const usedOrderNo = orderResp?.data?.orderNo || orderNo;
+
+              for (const d of details) {
+                await apiPost(API.addOrderDetail(usedOrderNo), { product: { productNo: d.productNo }, qty: d.qty });
+              }
+            }
+
+            showSuccessToast();
+            resetForm();
+          } catch (err) {
+            const msg = err?.response?.data?.message || err?.response?.data?.error || err?.message || "未知錯誤";
+            alert((isEdit.value ? "更新失敗：" : "建立失敗：") + msg);
+          } finally {
+            loading.submit = false;
+          }
+        };
+
+        // === 其它 ===
+        const addProductSection = () => {
+          form.products.push({ categoryId: "", itemId: "", toothPosition: "", quantity: 1 });
+          touched.products.push({ categoryId: false, itemId: false, toothPosition: false });
+          itemsMap.value.push([]); itemsLoading.value.push(false);
+        };
+        const removeProductSection = (idx) => {
+          form.products.splice(idx, 1); touched.products.splice(idx, 1);
+          itemsMap.value.splice(idx, 1); itemsLoading.value.splice(idx, 1);
+        };
+        const resetForm = () => {
+          Object.assign(form, {
+            clinicId: "", dentistId: "", patientName: "",
+            products: [{ categoryId: "", itemId: "", toothPosition: "", quantity: 1 }],
+            returnAt: ""
+          });
+          dentists.value = []; itemsMap.value = [[]]; itemsLoading.value = [false];
+          touched.clinicId = false; touched.dentistId = false; touched.patientName = false; touched.returnAt = false;
+          touched.products = [{ categoryId: false, itemId: false, toothPosition: false }];
+        };
+
+        // === 初始化 ===
+        onMounted(async () => {
+          if (toastSuccess.value && window.bootstrap && bootstrap.Toast) {
+            // eslint-disable-next-line no-undef
+            toastInstance = bootstrap.Toast.getOrCreateInstance(toastSuccess.value, { delay: 1800 });
+          }
+          await Promise.all([fetchClinics(), fetchCategories()]);
+          if (isEdit.value) {
+            try { await loadCaseAndPrefill(); }
+            catch (e) { alert(`載入案件失敗：${e?.response?.data?.message || e?.message || '未知錯誤'}`); }
+          }
+        });
+
+        return {
+          // Layout
+          currentView, currentTime, loginUser, getViewTitle, loginRole, timeInterval,
+          // 狀態
+          isEdit, editCaseNo, loading,
+          // 表單
+          form, touched, clinics, dentists, categories, itemsMap,
+          dentistsLoading, itemsLoading, today, toothPositions,
+
+          // 預覽摘要用：診所/醫師顯示名稱
+          selectedClinicName, selectedDentistName,
+
+          //新增 tomorrow（並保留 today 以備他處使用）
+          today, tomorrow, toothPositions,
+
+          // 方法
+          onClinicChange, onCategoryChange, isTouchedAndEmpty,
+          addProductSection, removeProductSection, resetForm, handleSubmit,
+          // Toast
+          toastSuccess
+        };
+      }
+    }).mount('#app');
+  </script>
+
+</body>
+
+</html>
