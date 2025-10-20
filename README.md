@@ -86,7 +86,9 @@ MySQL (RDBMS)
 | 客戶資料 | `clinic`、`dentist`、`clinic_dentist` | 多對多 |
 | 會員/權限 | `member` | - |
 
-📸 *建議截圖 3：ERD 圖或資料表關聯圖（可用 draw.io 或 IntelliJ Database 生成）*
+<p align="left">
+  <img src="images/Balance_Dental_Lab_ER_Diagram.png" alt="Dashboard" width="600">
+</p>
 
 ---
 
