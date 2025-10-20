@@ -101,8 +101,12 @@ MySQL (RDBMS)
 - 自動計算金額，連動資料庫 `order` 與 `order_detail`
 - 提供一般件 / 急件分類統計
 
-📸 *建議截圖 4：建立病例頁面（含多品項區塊）*
-
+<p align="left">
+  <img src="images/createCase.png" alt="Dashboard" width="600">
+</p>
+<p align="left">
+  <img src="images/caseList.png" alt="Dashboard" width="600">
+</p>
 ---
 
 ### 2. 🏥 診所與醫師管理
