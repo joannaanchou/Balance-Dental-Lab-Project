@@ -53,7 +53,6 @@ Balance Dental Lab 是一個牙技所日常營運的資訊化系統，涵蓋以�
 | 通訊 | RESTful API、CORS |
 | 版本控管 | Git / GitHub |
 
-📸 *建議截圖 2：專案分層結構圖（或 IntelliJ 專案樹）*
 
 ---
 
