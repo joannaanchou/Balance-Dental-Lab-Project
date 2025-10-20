@@ -1,4 +1,4 @@
-# 🦷 Balanced Dental Lab Management System
+# 🦷 Balance Dental Lab Management System
 
 > 一套為牙技所設計的 **全端管理系統**，整合病例、訂單、產品、客戶、帳號與報表模組。  
 > 本專案採用 **Spring Boot + MySQL + Vue.js + Bootstrap**，並搭配 Chart.js 做視覺化統計。  
