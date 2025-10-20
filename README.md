@@ -152,7 +152,9 @@ MySQL (RDBMS)
 - 診所營收佔比圓餅圖（可切換時間區間）
 - 即時顯示營運狀況
 
-📸 *建議截圖 8：Dashboard KPI 與圓餅圖畫面*
+<p align="left">
+  <img src="images/dashboard.png" alt="Dashboard" width="600">
+</p>
 
 ---
 
