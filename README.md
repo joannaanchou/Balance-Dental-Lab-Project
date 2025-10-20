@@ -114,7 +114,12 @@ MySQL (RDBMS)
 - 建立診所後可關聯多位醫師
 - 支援搜尋與編輯
 
-📸 *建議截圖 5：診所／醫師管理畫面*
+<p align="left">
+  <img src="images/customerManagement.png" alt="Dashboard" width="600">
+</p>
+<p align="left">
+  <img src="images/searchCustomer.png" alt="Dashboard" width="600">
+</p>
 
 ---
 
