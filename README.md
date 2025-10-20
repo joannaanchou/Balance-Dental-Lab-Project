@@ -37,7 +37,9 @@ Balance Dental Lab 是一個牙技所日常營運的資訊化系統，涵蓋以�
 - 👤 **會員與權限控管（Admin / Staff）**
 - 📊 **營收統計與 KPI 視覺化報表**
 
-📸 *建議截圖 1：專案首頁 Dashboard 畫面（顯示 KPI 與圓餅圖）*
+<p align="left">
+  <img src="images/home.png" alt="Dashboard" width="600">
+</p>
 
 ---
 
