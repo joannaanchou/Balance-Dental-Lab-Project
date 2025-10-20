@@ -107,6 +107,7 @@ MySQL (RDBMS)
 <p align="left">
   <img src="images/caseList.png" alt="Dashboard" width="600">
 </p>
+
 ---
 
 ### 2. 🏥 診所與醫師管理
@@ -128,7 +129,9 @@ MySQL (RDBMS)
 - 用於病例開單時的產品選項來源
 - 資料來源：`product_category`、`product_item`、`product_detail`
 
-📸 *建議截圖 6：產品管理畫面*
+<p align="left">
+  <img src="images/productManagement.png" alt="Dashboard" width="600">
+</p>
 
 ---
 
@@ -138,7 +141,9 @@ MySQL (RDBMS)
   - `staff`：瀏覽／有限操作
 - 使用 Guard Overlay 進行前端權限防護
 
-📸 *建議截圖 7：權限警示彈窗*
+<p align="left">
+  <img src="images/guardOverlay.png" alt="Dashboard" width="600">
+</p>
 
 ---
 
